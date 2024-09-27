@@ -3,6 +3,11 @@
 This tool is a website built on Next.js and React, intended to identify stakeholders from user-input documents and generate a graph of coalitions between stakeholders.
 
 ## Running the Website Locally
+Enter into the frontend folder.
+```bash
+cd frontend
+```
+
 First, make sure you have `npm` installed (link [here](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)). Then, install the node packages locally by running the following command within the project root.
 ```bash
 npm install
