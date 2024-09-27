@@ -4,25 +4,35 @@ from collections import defaultdict
 
 
 def main():
-    graph_dict = defaultdict(dict)
-    graph_dict[1][2] = 1
-    graph_dict[1][3] = 1
-    graph_dict[2][3] = 1
+    # example from https://chatgpt.com/share/66f72316-df6c-8000-88e9-b726fb93e52f
+    graph = defaultdict(dict)
+    graph[0][1] = 5
+    graph[0][2] = 7
+    graph[0][3] = 6
+    graph[0][4] = 3
 
-    graph_dict[4][5] = 1
-    graph_dict[5][6] = 1
-    graph_dict[6][4] = 1
+    graph[1][5] = 8
+    graph[1][6] = 4
 
-    graph_dict[1][4] = 10
-    graph_dict[2][5] = 10
-    graph_dict[3][6] = 10
+    graph[2][3] = 8
+    graph[2][7] = 5
 
-    adj = [[0] * 7 for _ in range(7)]
-    for i in range(1, 7):
-        for j in range(1, 7):
-            if i in graph_dict and j in graph_dict[i]:
-                adj[i][j] = graph_dict[i][j]
-                adj[j][i] = graph_dict[i][j]
+    graph[3][4] = 6
+    
+    graph[4][5] = 5
+    graph[4][6] = 5
+
+    graph[5][6] = 7
+    graph[5][7] = 6
+    graph[6][7] = 1
+    
+
+    adj = [[0] * 8 for _ in range(8)]
+    for i in range(8):
+        for j in range(8):
+            if i in graph and j in graph[i]:
+                adj[i][j] = graph[i][j]
+                adj[j][i] = graph[i][j]
     
     for row in adj:
         print(row)
@@ -38,6 +48,17 @@ def main():
     
     # label each edge with its edge weight
     g.es["label"] = g.es["weight"]
+
+    g.vs["label"] = [
+        'Alex',
+        'Darren',
+        'Lina',
+        'Maya',
+        'Leila',
+        'Sophie',
+        'Emily',
+        'Jonas'
+    ]
 
     # create a plot of partition and save it to "out.png"
     ig.plot(partition, "out.png", vertex_size=30, vertex_label_size=10, edge_width=1, edge_arrow_size=1)
