@@ -1,24 +1,9 @@
-import logging
-import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-import sys
+import cv2
+import numpy as np
 
-MAPS = {
-    "4x4": ["0000", "1101", "0000", "1000"],
-    "8x8": [
-        "00000000",
-        "00000000",
-        "00010000",
-        "00000100",
-        "00010000",
-        "01100010",
-        "01001010",
-        "00010000",
-    ],
-}
+PIXEL_SIZE = 50
 
 class GridEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array", "ansi"], "render_fps": 8}
@@ -31,7 +16,7 @@ class GridEnv(gym.Env):
         3: (0, 1),  # RIGHT
     }
 
-    def __init__(self):
+    def __init__(self, render_mode='ansi'):
         self.obstacles = [
             [0, 0, 1, 0, 0, 0],
             [1, 0, 1, 0, 1, 0],
@@ -44,11 +29,10 @@ class GridEnv(gym.Env):
         self.ncol = len(self.obstacles[0])
 
         self.action_space = spaces.Discrete(4) # define the number of possible actions/moves
-        self.observation_space = spaces.Discrete(self.nrow * self.ncol) # define the number of possible states, where the agent is. this means each observation is a single int
+        self.observation_space = spaces.Discrete(self.nrow * self.ncol) # define the number of possible states, where the agent is. this case means each observation is a single int
 
-        self.fig = None
-        self.render_mode = 'ansi'
-        self.fps = self.metadata["render_fps"]
+        # define a render mode (otherwise sb3 is unhappy)
+        self.render_mode = render_mode
     
     def reset(self, seed=0):
         super().reset(seed=seed)
@@ -61,8 +45,6 @@ class GridEnv(gym.Env):
         self.done = False
         self.agent_action = None
         self.n_iter = 0
-
-        # self.render()
 
         return self.get_obs(), self.get_info()
 
@@ -84,23 +66,62 @@ class GridEnv(gym.Env):
         
         self.n_iter += 1
 
-        # self.render()
         return self.get_obs(), self.reward, self.done, False, self.get_info()
 
     def render(self):
-        for row in range(self.nrow):
-            for col in range(self.ncol):
-                if (row, col) == self.agent_xy:
-                    print("A", end="")
-                elif (row, col) == self.goal_xy:
-                    print("G", end="")
-                elif self.obstacles[row][col] == self.OBSTACLE:
-                    print("X", end="")
-                else:
-                    print(".", end="")
+        if self.render_mode == "ansi":
+            for row in range(self.nrow):
+                for col in range(self.ncol):
+                    if (row, col) == self.agent_xy:
+                        print("A", end="")
+                    elif (row, col) == self.goal_xy:
+                        print("G", end="")
+                    elif self.obstacles[row][col] == self.OBSTACLE:
+                        print("X", end="")
+                    else:
+                        print(".", end="")
+                print()
             print()
-        print()
-    
+        elif self.render_mode == 'human':
+            # use cv2 to render the grid
+            # make a 3-channel image where each cell is PIXEL_SIZE x PIXEL_SIZE
+            img = np.zeros((self.nrow * PIXEL_SIZE, self.ncol * PIXEL_SIZE, 3), dtype=np.uint8)
+            for row in range(self.nrow):
+                for col in range(self.ncol):
+                    if (row, col) == self.agent_xy:
+                        color = (0, 0, 255)
+                    elif (row, col) == self.goal_xy:
+                        color = (0, 255, 0)
+                    elif self.obstacles[row][col] == self.OBSTACLE:
+                        color = (0, 0, 0)
+                    else:
+                        color = (255, 255, 255)
+                    img[row * PIXEL_SIZE:(row + 1) * PIXEL_SIZE, col * PIXEL_SIZE:(col + 1) * PIXEL_SIZE] = color
+            img = cv2.resize(img, (self.ncol * PIXEL_SIZE * 2, self.nrow * PIXEL_SIZE * 2), interpolation=cv2.INTER_NEAREST)
+
+            cv2.imshow("Grid", img)
+            cv2.waitKey(100)
+        elif self.render_mode == 'rgb_array':
+            # use cv2 to render the grid
+            # make a 3-channel image where each cell is PIXEL_SIZE x PIXEL_SIZE
+            img = np.zeros((self.nrow * PIXEL_SIZE, self.ncol * PIXEL_SIZE, 3), dtype=np.uint8)
+            for row in range(self.nrow):
+                for col in range(self.ncol):
+                    if (row, col) == self.agent_xy:
+                        color = (0, 0, 255)
+                    elif (row, col) == self.goal_xy:
+                        color = (0, 255, 0)
+                    elif self.obstacles[row][col] == self.OBSTACLE:
+                        color = (0, 0, 0)
+                    else:
+                        color = (255, 255, 255)
+                    img[row * PIXEL_SIZE:(row + 1) * PIXEL_SIZE, col * PIXEL_SIZE:(col + 1) * PIXEL_SIZE] = color
+            img = cv2.resize(img, (self.ncol * PIXEL_SIZE * 2, self.nrow * PIXEL_SIZE * 2), interpolation=cv2.INTER_NEAREST)
+            return img
+
+    def close(self):
+        cv2.destroyAllWindows()
+
     ##### HELPER FUNCTIONS
     def calc_reward(self, x, y):
         if not (0 <= x < self.nrow and 0 <= y < self.ncol):
