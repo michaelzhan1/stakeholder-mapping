@@ -11,7 +11,7 @@ class NegotationEnv(gym.Env):
     def __init__(self, render_mode='ansi'):
         # define stakeholders and powers. let 0 be the agent, and n-1 be the goal
         self.n = 3
-        self.powers = [1, 1, 10]
+        self.powers = [1, 1, 5]
 
         # actions: talk to each person (including self)
         self.action_space = spaces.Discrete(self.n)
@@ -49,7 +49,7 @@ class NegotationEnv(gym.Env):
 
         # on successful convince, update state and reward
         prob = self_power / (self_power + other_power)
-        if (random.random() < prob):
+        if (random.random() < prob ** 2):
             self.state[action] = 1
             self.reward += self.powers[action]
 
