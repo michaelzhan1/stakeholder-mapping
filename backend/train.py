@@ -1,17 +1,14 @@
-import gymnasium as gym
-import moviepy
-
 from stable_baselines3 import PPO
-from grid_env import GridEnv
 from stable_baselines3.common.env_util import make_vec_env
+from single_agent_negotiation import NegotationEnv
 
 # wrap in DummyVecEnv to make it compatible with stable_baselines3
 # then wrap in a VecMonitor to record statistics
 # then wrap in a VecVideoRecorder to record video
-env = make_vec_env(GridEnv, n_envs=1, env_kwargs={'render_mode': 'rgb_array'})
+env = make_vec_env(NegotationEnv, n_envs=1, env_kwargs={'render_mode': 'ansi'})
 
 # define, learn, and save model
-model = PPO("MlpPolicy", env, verbose=1)
+model = PPO("MlpPolicy", env, verbose=1, gamma=1)
 model.learn(total_timesteps=20000)
 model.save("ppo_model")  # saves model to ppo_model.zip
 
@@ -24,9 +21,12 @@ obs = env.reset()
 while True:
     # run the final strategy
     action, _states = model.predict(obs)
-    obs, rewards, dones, info = env.step(action)
+    obs, rewards, done, info = env.step(action)
     
-    env.render()
-    if dones:
+    if done:
+        print("Final state: ")
+        print(info[0]['terminal_observation'])
         env.close() # make sure to close, otherwise errors occur with gymnasium
         break
+    else:
+        env.render()
