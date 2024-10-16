@@ -10,7 +10,7 @@ class NegotationEnv(gym.Env):
     # init the environment
     def __init__(self, render_mode='ansi'):
         # define stakeholders and powers. let 0 be the agent, and n-1 be the goal
-        self.powers = [1, 5, 3, 10]
+        self.powers = np.array([1, 5, 3, 10])
         self.n = len(self.powers)
 
         # actions: talk to each person (including self)
@@ -44,15 +44,14 @@ class NegotationEnv(gym.Env):
         # set base reward
         self.reward = -1
 
-        # try to convince the person
-        self_power = self.powers[0]
-        other_power = self.powers[action]
-
-        # on successful convince, update state and reward
-        prob = self_power / (self_power + other_power)
-        if (random.random() < prob ** 2):
-            self.state[action] = 1
-            self.reward += self.powers[action]
+        # check if we've already convinced the target
+        if self.state[action] == 0:
+            # on successful convince, update state and reward
+            total_power = self.powers[self.state == 1].sum()
+            prob = total_power / (total_power + self.powers[action])
+            if (random.random() < prob ** 1.5):  # let the probability scale slower than the reward to incentivize taking intermediate steps
+                self.state[action] = 1
+                self.reward += self.powers[action]
 
         # check if we have convinced the target
         if self.state[self.n - 1]:
@@ -71,6 +70,7 @@ class NegotationEnv(gym.Env):
         elif self.render_mode == 'rgb_array':
             pass
 
+    # close a CV2 render environment
     def close(self):
         cv2.destroyAllWindows()
 

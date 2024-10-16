@@ -1,6 +1,10 @@
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.utils import set_random_seed
 from single_agent_negotiation import NegotationEnv
+import numpy as np
+
+set_random_seed(0)
 
 # wrap in DummyVecEnv to make it compatible with stable_baselines3
 # then wrap in a VecMonitor to record statistics
@@ -18,12 +22,12 @@ model = PPO.load("ppo_model")  # load model from zip
 
 # render final output of model
 obs = env.reset()
-last_obs = None
+last_obs = np.copy(env.get_attr('state')[0])
+env.render()
 while True:
     # run the final strategy
-    action, _states = model.predict(obs)
+    action, _states = model.predict(obs, deterministic=True)
     obs, rewards, done, info = env.step(action)
-    
     
     if done:
         print("Final state: ")
@@ -31,6 +35,7 @@ while True:
         env.close() # make sure to close, otherwise errors occur with gymnasium
         break
     else:
+        # only print successful actions
         if (last_obs != obs).any():
             env.render()
             last_obs = obs
