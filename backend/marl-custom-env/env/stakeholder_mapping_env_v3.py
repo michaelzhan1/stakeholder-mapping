@@ -124,6 +124,15 @@ class NegotiationEnv(AECEnv):
             self.stakeholders[agent]["relationships"] = np.zeros(len(self.agents), dtype=int)
 
         return self._get_obs(self.agent_selection), {}
+    
+    def observe(self, agent):
+        """
+        Observe should return the observation of the specified agent. This function
+        should return a sane observation (though not necessarily the most up to date possible)
+        at any time after reset() is called.
+        """
+        # observation of one agent is the previous state of the other
+        return self._get_obs(agent)
 
     def _get_obs(self, agent):
         state = self.stakeholders[agent]
