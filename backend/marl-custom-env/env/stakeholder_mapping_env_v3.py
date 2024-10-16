@@ -6,24 +6,40 @@ from gymnasium import spaces
 class NegotiationEnv(AECEnv):
     metadata = {"render_modes": ["human"], "name": "negotiation_v1"}
 
-    def __init__(self, stakeholder_matrix=None, p=0.5):
-        """
-        Args:
-            stakeholder_matrix (np.ndarray): Optional input matrix where each row
-                represents a stakeholder with columns for characteristics (e.g., power)
-                and a one-hot indicator for primary stakeholder.
-            p (float): Probability of successful engagement.
-        """
+    def __init__(self, stakeholder_matrix=None):
         super().__init__()
 
         # Parse stakeholder configuration
         self.stakeholders = self._initialize_stakeholders(stakeholder_matrix)
-        self.p = p  # Probability of successful engagement
 
         # Define agents based on stakeholder names
         self.agents = list(self.stakeholders.keys())
         self.possible_agents = self.agents[:]
         self.primary_agent = self._find_primary_agent()
+        self.negotiator = self._find_negotiator()
+
+        if self.negotiator is None:
+            raise ValueError("No negotiator found in the stakeholder configuration.")
+
+        # Define action and observation spaces
+        self._define_spaces()
+
+        self.reset()
+
+    def __init__(self, stakeholder_matrix=None):
+        super().__init__()
+
+        # Parse stakeholder configuration
+        self.stakeholders = self._initialize_stakeholders(stakeholder_matrix)
+
+        # Define agents based on stakeholder names
+        self.agents = list(self.stakeholders.keys())
+        self.possible_agents = self.agents[:]
+        self.primary_agent = self._find_primary_agent()
+        self.negotiator = self._find_negotiator()
+
+        if self.negotiator is None:
+            raise ValueError("No negotiator found in the stakeholder configuration.")
 
         # Define action and observation spaces
         self._define_spaces()
@@ -34,9 +50,21 @@ class NegotiationEnv(AECEnv):
         if stakeholder_matrix is None:
             # Default: Generate a simple set of stakeholders
             return {
-                "agent_1": {"position": -1, "power": 2, "knowledge": 2, "urgency": 1, "legitimacy": 1, "is_primary": True, "is_negotiator": False},
-                "agent_2": {"position": 0, "power": 2, "knowledge": 1, "urgency": 0, "legitimacy": 1, "is_primary": False, "is_negotiator": True},
-                "agent_3": {"position": 1, "power": 0, "knowledge": 1, "urgency": 1, "legitimacy": 1, "is_primary": False, "is_negotiator": False}
+                "agent_1": {
+                    "position": -1, "power": 2, "knowledge": 2, "urgency": 1, "legitimacy": 1,
+                    "is_primary": True, "is_negotiator": False,
+                    "relationships": [0, 0, 0]  # Relationship with self, agent_2, agent_3
+                },
+                "agent_2": {
+                    "position": 0, "power": 2, "knowledge": 1, "urgency": 0, "legitimacy": 1,
+                    "is_primary": False, "is_negotiator": True,
+                    "relationships": [0, 0, 0]  # Relationship with agent_1, self, agent_3
+                },
+                "agent_3": {
+                    "position": 1, "power": 0, "knowledge": 1, "urgency": 1, "legitimacy": 1,
+                    "is_primary": False, "is_negotiator": False,
+                    "relationships": [0, 0, 0]  # Relationship with agent_1, agent_2, self
+                }
             }
         else:
             stakeholders = {}
@@ -55,18 +83,17 @@ class NegotiationEnv(AECEnv):
             return stakeholders
 
     def _find_primary_agent(self):
-        """Identify the primary agent from the stakeholder data."""
         for agent, attrs in self.stakeholders.items():
             if attrs["is_primary"]:
                 return agent
-        return self.agents[0]  # Default to the first agent if none marked primary
+        raise ValueError("No primary agent found in the stakeholder configuration.")
 
     def _find_negotiator(self):
         for agent, attrs in self.stakeholders.items():
             if attrs["is_negotiator"]:
                 return agent
-        return None
-    
+        raise ValueError("No negotiator found in the stakeholder configuration.")
+
     def _define_spaces(self):
         n_agents = len(self.agents)
 
@@ -86,18 +113,17 @@ class NegotiationEnv(AECEnv):
         }
 
     def reset(self, seed=None, options=None):
-        """Reset the environment to its initial state."""
         self.agents = self.possible_agents[:]
         self.rewards = {agent: 0 for agent in self.agents}
         self.terminations = {agent: False for agent in self.agents}
         self.truncations = {agent: False for agent in self.agents}
-        self.agent_selection = self.agents[0]  # Start with the first agent
+        self.agent_selection = self.agents[0]
 
-        # Clear all engagements
+        # Reset relationships
         for agent in self.agents:
             self.stakeholders[agent]["relationships"] = np.zeros(len(self.agents), dtype=int)
 
-        return self._get_obs(self.agent_selection)
+        return self._get_obs(self.agent_selection), {}
 
     def _get_obs(self, agent):
         state = self.stakeholders[agent]
@@ -111,7 +137,9 @@ class NegotiationEnv(AECEnv):
         }
 
     def step(self, action):
-        """Perform one step in the environment."""
+        if self.terminations[self.agent_selection]:
+            return self._get_obs(self.agent_selection), 0, True, False, {}
+
         agent = self.agent_selection
 
         if action == 0:
@@ -121,14 +149,13 @@ class NegotiationEnv(AECEnv):
             target_agent = self.agents[action - 1]
             reward = self._attempt_engagement(agent, target_agent)
 
-        # Update rewards and move to the next agent
-        self.rewards[agent] += reward
+        self.rewards[agent] = reward
+        terminated = self._check_termination()
+
         self._next_agent()
 
-        # Check termination conditions
-        if self.agent_selection == self.negotiator:
-            engaged_with_primary = self.stakeholders[self.negotiator]["relationships"][self.agents.index(self.primary_agent)] == 1
-            self.terminations = {a: engaged_with_primary for a in self.agents}
+        obs = self._get_obs(self.agent_selection)
+        return obs, reward, terminated, False, {}
 
     def _attempt_engagement(self, agent, target_agent):
         if agent == target_agent:
@@ -148,7 +175,23 @@ class NegotiationEnv(AECEnv):
         else:
             # Engagement failed
             return -1  # Negative reward for unsuccessful interaction
- 
+
+    def _calculate_engagement_probability(self, agent_state, target_state):
+        # Implement logic for engagement probability based on stakeholder attributes
+        # This is a simplified version and can be expanded
+        p = 0.5  # Base probability
+
+        if agent_state["position"] == target_state["position"]:
+            p += 0.2
+        elif agent_state["position"] * target_state["position"] < 0:  # Opposing positions
+            p -= 0.2
+
+        if agent_state["power"] > target_state["power"]:
+            p += 0.1
+        elif agent_state["power"] < target_state["power"]:
+            p -= 0.1
+
+        return max(0.1, min(0.9, p))  # Clamp probability between 0.1 and 0.9
 
     def _calculate_reward(self, agent, target_agent):
         agent_state = self.stakeholders[agent]
@@ -174,23 +217,16 @@ class NegotiationEnv(AECEnv):
         return reward
 
     def _next_agent(self):
-        """Select the next agent in the sequence."""
         current_index = self.agents.index(self.agent_selection)
         self.agent_selection = self.agents[(current_index + 1) % len(self.agents)]
-    
-    # add the termination function
+
     def _check_termination(self):
-        """Check if the negotiation should terminate."""
-        negotiator = self.negotiator
-        primary = self.primary_agent
-
-        if primary in self.stakeholders[negotiator]["engagements"]:
-            # Negotiation ends when negotiator engages with primary stakeholder
-            self.terminations = {agent: True for agent in self.agents}
-
-            # Calculate final reward based on negotiation outcome
-            final_reward = self._calculate_final_reward()
-            self.rewards[negotiator] += final_reward
+        if self.agent_selection == self.negotiator:
+            engaged_with_primary = self.stakeholders[self.negotiator]["relationships"][self.agents.index(self.primary_agent)] == 1
+            if engaged_with_primary:
+                self.terminations = {a: True for a in self.agents}
+            return engaged_with_primary
+        return False
 
     def render(self, mode="human"):
         print("-" * 40)
@@ -200,25 +236,24 @@ class NegotiationEnv(AECEnv):
                   f"Legitimacy = {state['legitimacy']}, Relationships = {state['relationships']}")
 
     def close(self):
-        """Optional cleanup."""
         pass
 
 # Wrapping the environment for Stable Baselines3 compatibility
-def env(stakeholder_matrix=None, p=0.5):
-    return wrappers.CaptureStdoutWrapper(NegotiationEnv(stakeholder_matrix, p))
-
+def env(stakeholder_matrix=None):
+    return wrappers.CaptureStdoutWrapper(NegotiationEnv(stakeholder_matrix))
 
 if __name__ == "__main__":
-    env = NegotiationEnv(p=0.5)
-    env.reset()
+    env = NegotiationEnv()
+    obs, _ = env.reset()
     for _ in range(10):
         agent = env.agent_selection
         action = np.random.choice(env.action_spaces[agent].n)  
-        env.step(action)
-        obs = env._get_obs(agent)
-        reward = env.rewards[agent]
+        obs, reward, terminated, truncated, _ = env.step(action)
 
-        print()
-        print(f"Agent: {agent}, Action: {action}, Reward: {reward}")
+        print(f"\nAgent: {agent}, Action: {action}, Reward: {reward}")
         print(f"Observation: {obs}")
+        print(f"Terminated: {terminated}, Truncated: {truncated}")
         env.render()
+
+        if terminated or truncated:
+            break
