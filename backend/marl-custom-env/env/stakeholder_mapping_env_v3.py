@@ -1,7 +1,11 @@
+import functools
+
 import numpy as np
 from pettingzoo.utils import wrappers
 from pettingzoo.utils.env import AECEnv
+from pettingzoo.utils import wrappers
 from gymnasium import spaces
+
 
 class NegotiationEnv(AECEnv):
     metadata = {"render_modes": ["human"], "name": "negotiation_v1"}
@@ -26,7 +30,15 @@ class NegotiationEnv(AECEnv):
 
         self.reset()
 
-    def __init__(self, stakeholder_matrix=None):
+    def __init__(self, stakeholder_matrix=None, render_mode=None):
+        """
+        The init method takes in environment arguments and
+         should define the following attributes:
+        - possible_agents
+        - render_mode
+
+        These attributes should not be changed after initialization.
+        """
         super().__init__()
 
         # Parse stakeholder configuration
@@ -38,13 +50,20 @@ class NegotiationEnv(AECEnv):
         self.primary_agent = self._find_primary_agent()
         self.negotiator = self._find_negotiator()
 
+        # Mapping between agent name and ID
+        self.agent_name_mapping = dict(
+            zip(self.possible_agents, list(range(len(self.possible_agents))))
+        )
+
         if self.negotiator is None:
             raise ValueError("No negotiator found in the stakeholder configuration.")
 
         # Define action and observation spaces
-        self._define_spaces()
+        self._action_spaces = {agent: self.action_space(agent) for agent in self.agents}      
+        self._observation_spaces = {agent: self.observation_space(agent) for agent in self.agents}
 
-        self.reset()
+        self.render_mode = render_mode
+        # self.reset() # EDIT
 
     def _initialize_stakeholders(self, stakeholder_matrix):
         if stakeholder_matrix is None:
@@ -94,58 +113,104 @@ class NegotiationEnv(AECEnv):
                 return agent
         raise ValueError("No negotiator found in the stakeholder configuration.")
 
-    def _define_spaces(self):
-        n_agents = len(self.agents)
+    # Observation space should be defined here.
+    # lru_cache allows observation and action spaces to be memoized, reducing clock cycles required to get each agent's space.
+    # If your spaces change over time, remove this line (disable caching).
+    @functools.lru_cache(maxsize=None)
+    def observation_space(self, agent):
+        """
+        Our observation space must include the agent's own characteristics and relationships,
+        as well as the characteristics of other stakeholders
+        """
+        # gymnasium spaces are defined and documented here: https://gymnasium.farama.org/api/spaces/
 
-        self.action_spaces = {
-            agent: spaces.Discrete(n_agents) for agent in self.agents
-        }
+        # Observation space components
+        self_info_space = spaces.Dict({
+            "position": spaces.Discrete(3, start=-1),
+            "power": spaces.Discrete(3),
+            "knowledge": spaces.Discrete(3),
+            "urgency": spaces.Discrete(2),
+            "legitimacy": spaces.Discrete(2)
+        })
 
-        self.observation_spaces = {
-            agent: spaces.Dict({
-                "position": spaces.Box(low=-1, high=1, shape=(1,), dtype=int),
-                "power": spaces.Discrete(3),
-                "knowledge": spaces.Discrete(3),
-                "urgency": spaces.Discrete(2),
-                "legitimacy": spaces.Discrete(2),
-                "relationships": spaces.MultiBinary(n_agents)
-            }) for agent in self.agents
-        }
+        obs = spaces.Dict({
+            'self_info': self_info_space,
+            'self_relationships': spaces.MultiBinary(len(self.agents)),
+            'other_agents_info': spaces.Dict({
+                agent: self_info_space for agent in self.agents
+            })
+        })
+        return obs
+
+    # Action space should be defined here.
+    # If your spaces change over time, remove this line (disable caching).
+    @functools.lru_cache(maxsize=None)
+    def action_space(self, agent):
+        return spaces.Discrete(len(self.agents))
+
 
     def reset(self, seed=None, options=None):
         self.agents = self.possible_agents[:]
         self.rewards = {agent: 0 for agent in self.agents}
+        self._cumulative_rewards = {agent: 0 for agent in self.agents}
         self.terminations = {agent: False for agent in self.agents}
         self.truncations = {agent: False for agent in self.agents}
         self.agent_selection = self.agents[0]
+
+        self.infos = {agent: {} for agent in self.agents}
 
         # Reset relationships
         for agent in self.agents:
             self.stakeholders[agent]["relationships"] = np.zeros(len(self.agents), dtype=int)
 
-        return self._get_obs(self.agent_selection), {}
+        return self._get_obs(self.agent_selection), self.infos
     
     def observe(self, agent):
         """
         Observe should return the observation of the specified agent. This function
         should return a sane observation (though not necessarily the most up to date possible)
         at any time after reset() is called.
-        """
-        # observation of one agent is the previous state of the other
-        return self._get_obs(agent)
 
-    def _get_obs(self, agent):
+        This includes the relationship array.
+        """
+        return self._get_obs(agent)
+    
+    def _get_self_info(self, agent):
+        """Helper for _get_obs"""
         state = self.stakeholders[agent]
-        return {
-            "position": np.array([state["position"]]),
+        self_info = {
+            "position": state["position"],
             "power": state["power"],
             "knowledge": state["knowledge"],
             "urgency": state["urgency"],
-            "legitimacy": state["legitimacy"],
-            "relationships": state["relationships"]
+            "legitimacy": state["legitimacy"]
         }
+        return self_info
+
+    def _get_obs(self, agent):
+        state = self.stakeholders[agent]
+
+        obs = {
+            'self_info': self._get_self_info(agent),
+            'self_relationships': state["relationships"],
+            'other_agents_info': {
+                other_agent: self._get_self_info(other_agent) for other_agent in self.agents
+            }
+        }
+        return obs
 
     def step(self, action):
+        """
+        step(action) takes in an action for the current agent (specified by
+        agent_selection) and needs to update
+        - rewards
+        - _cumulative_rewards (accumulating the rewards)
+        - terminations
+        - truncations
+        - infos
+        - agent_selection (to the next agent)
+        And any internal state used by observe() or render()
+        """
         if self.terminations[self.agent_selection]:
             return self._get_obs(self.agent_selection), 0, True, False, {}
 
@@ -159,12 +224,13 @@ class NegotiationEnv(AECEnv):
             reward = self._attempt_engagement(agent, target_agent)
 
         self.rewards[agent] = reward
+        self._cumulative_rewards[agent] += reward
         terminated = self._check_termination()
 
         self._next_agent()
 
         obs = self._get_obs(self.agent_selection)
-        return obs, reward, terminated, False, {}
+        return obs, reward, terminated, False, self.infos
 
     def _attempt_engagement(self, agent, target_agent):
         if agent == target_agent:
@@ -226,10 +292,12 @@ class NegotiationEnv(AECEnv):
         return reward
 
     def _next_agent(self):
+        """Agents are allowed to negotiate in order of index."""
         current_index = self.agents.index(self.agent_selection)
         self.agent_selection = self.agents[(current_index + 1) % len(self.agents)]
 
     def _check_termination(self):
+        """Terminates when the negotiator engages with the primary negotiator"""
         if self.agent_selection == self.negotiator:
             engaged_with_primary = self.stakeholders[self.negotiator]["relationships"][self.agents.index(self.primary_agent)] == 1
             if engaged_with_primary:
@@ -256,7 +324,7 @@ if __name__ == "__main__":
     obs, _ = env.reset()
     for _ in range(10):
         agent = env.agent_selection
-        action = np.random.choice(env.action_spaces[agent].n)  
+        action = np.random.choice(env._action_spaces[agent].n)  
         obs, reward, terminated, truncated, _ = env.step(action)
 
         print(f"\nAgent: {agent}, Action: {action}, Reward: {reward}")
