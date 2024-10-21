@@ -1,5 +1,6 @@
 "use client"
 
+
 import { useState } from "react";
 
 
@@ -7,13 +8,22 @@ export default function SampleInputAndResponse ({ className }) {
   const [prompt, setPrompt] = useState(null);
   const [response, setResponse] = useState(null);
 
-  const handleSubmit = (e) => {
-    // handle openAI API call here
+  const handleSubmit = async (e) => {
     e.preventDefault();
     let input = e.target.input.value;
     setPrompt(input);
-    let response = `Mirrored response: ${input}`;
-    setResponse(response);
+
+    // make api call
+    const response = await fetch("/api/gpt", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ input })
+    });
+    const output = await response.text();
+
+    setResponse(output);
   }
 
   return (
