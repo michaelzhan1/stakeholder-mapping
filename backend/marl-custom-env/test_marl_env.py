@@ -1,4 +1,4 @@
-from env.stakeholder_mapping_env_v3 import NegotiationEnv
+from env.stakeholder_mapping_env import NegotiationEnv
 
 from pettingzoo.test import parallel_api_test, api_test
 
