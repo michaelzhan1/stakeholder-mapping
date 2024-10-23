@@ -1,16 +1,15 @@
-import functools
+# Custom MARL Negotiation Environment: Simplified Case
+
 import numpy as np
-from pettingzoo.utils import wrappers
+from pettingzoo.utils import agent_selector
 from pettingzoo.utils.env import AECEnv
 from gymnasium import spaces
 
 class NegotiationEnv(AECEnv):
     metadata = {"render_modes": ["human"], "name": "negotiation_v1"}
 
-
     def __init__(self, stakeholder_matrix=None, render_mode=None):
         """Initialize the negotiation environment."""
-        super().__init__()
 
         # Parse stakeholder configuration
         self.stakeholders = self._initialize_stakeholders(stakeholder_matrix)
@@ -20,6 +19,7 @@ class NegotiationEnv(AECEnv):
         self.agents = self.possible_agents[:]
         self.primary_agent = self._find_primary_agent()
         self.negotiator = self._find_negotiator()
+        self.n_agents = len(self.agents)
 
         # Mapping between agent name and ID
         self.agent_name_mapping = dict(
@@ -35,29 +35,22 @@ class NegotiationEnv(AECEnv):
 
         for agent in self.possible_agents:
             # Create action space
-            self._action_spaces[agent] = spaces.Discrete(len(self.possible_agents))
+            self._action_spaces[agent] = spaces.Discrete(self.n_agents)
 
             # Create observation space
-            inner_obs = spaces.Dict({
-                "position": spaces.Discrete(3, start=-1),
-                "power": spaces.Discrete(3),
-                "knowledge": spaces.Discrete(3),
-                "urgency": spaces.Discrete(2),
-                "legitimacy": spaces.Discrete(2),
-                "relationships": spaces.MultiBinary(len(self.possible_agents))
-            })
+            low = np.repeat(np.array([[-1,0,0,0,0]]), repeats=self.n_agents, axis=0) # lowest bound for characteristics
 
             self._observation_spaces[agent] = spaces.Dict({
-                "observation": inner_obs,
-                "action_mask": spaces.Box(low=0, high=1, shape=(len(self.possible_agents),), dtype=np.int8)
+                "observation": spaces.MultiDiscrete(np.array([[3,3,3,2,2]]*self.n_agents), start=low),
+                "action_mask": spaces.Box(low=0, high=1, shape=(self.n_agents,), dtype=np.int8)
             })
 
         self.render_mode = render_mode
 
-        # Initialize state variables
-        self.reset()
-
     def _initialize_stakeholders(self, stakeholder_matrix):
+        """
+        Initializes a test case if user does not provide stakeholders
+        """
         if stakeholder_matrix is None:
             # Default: Generate a simple set of stakeholders
             return {
@@ -117,71 +110,67 @@ class NegotiationEnv(AECEnv):
         self.truncations = {agent: False for agent in self.agents}
         self.infos = {agent: {} for agent in self.agents}
 
-        # Reset agent selection to first agent
-        self.agent_selection = self.agents[0]
+        # Initialize agent selection
+        self._agent_selector = agent_selector(self.agents)
+        self.agent_selection = self._agent_selector.reset()
 
         # Reset relationships
         for agent in self.agents:
-            self.stakeholders[agent]["relationships"] = np.zeros(len(self.agents), dtype=int)
-
-        # Return initial observation for the first agent
-        return self._get_obs(self.agent_selection), self.infos
+            self.stakeholders[agent]["relationships"] = np.zeros(self.n_agents, dtype=int)
 
     def step(self, action):
-        """Execute one step in the environment."""
+        """Execute one step in the environment
+        step(action) takes in an action for the current agent (specified by
+        agent_selection) and needs to update
+        - rewards
+        - _cumulative_rewards (accumulating the rewards)
+        - terminations
+        - truncations
+        - infos
+        - agent_selection (to the next agent)
+        And any internal state used by observe() or render()."""
         if (
             self.terminations[self.agent_selection]
             or self.truncations[self.agent_selection]
         ):
-            return self._get_obs(self.agent_selection), 0, True, False, {}
+            self._was_dead_step(action)
+            return 
 
         agent = self.agent_selection
 
+        self._cumulative_rewards[agent] = 0
         # Process action and get reward
         reward = self._attempt_engagement(agent, self.agents[action])
 
         # Update rewards
         self.rewards[agent] = reward
-        self._cumulative_rewards[agent] += reward
 
         # Check termination conditions
         terminated = self._check_termination()
         if terminated:
             self.terminations = {agent: True for agent in self.agents}
 
+        self._accumulate_rewards()
+
         # Move to next agent
-        self._next_agent()
+        self.agent_selection = self._agent_selector.next()
 
-        # Get next observation
-        next_obs = self._get_obs(self.agent_selection)
-
-        return next_obs, reward, terminated, False, self.infos
-
-    def _get_obs(self, agent):
-        """Get observation for the specified agent."""
-        state = self.stakeholders[agent]
-
-        # Create action mask (can't select self)
-        action_mask = np.ones(len(self.agents), dtype=np.int8)
-        action_mask[self.agents.index(agent)] = 0
-
-        observation = {
-            "position": state["position"],
-            "power": state["power"],
-            "knowledge": state["knowledge"],
-            "urgency": state["urgency"],
-            "legitimacy": state["legitimacy"],
-            "relationships": state["relationships"].copy()
-        }
-
-        return {
-            "observation": observation,
-            "action_mask": action_mask
-        }
+        if self.render_mode == "human":
+            self.render()
 
     def observe(self, agent):
         """Return observation for the specified agent."""
-        return self._get_obs(agent)
+        # format stakeholder attributes into a matrix
+        stakeholder_attributes = []
+        characteristics = ['position', 'power', 'knowledge', 'urgency', 'legitimacy']
+        for agent in self.possible_agents:
+            stakeholder_attributes.append([self.stakeholders[agent][char] for char in characteristics])
+        # create the observation
+        observation = {
+            "observation": np.array(stakeholder_attributes), 
+            "action_mask" : np.ones(self.n_agents, dtype=np.int8) # action_mask does nothing right now
+        }
+        return observation
 
     def _find_primary_agent(self):
         """Find the primary agent in stakeholders."""
@@ -260,11 +249,6 @@ class NegotiationEnv(AECEnv):
 
         return reward
 
-    def _next_agent(self):
-        """Move to the next agent in turn."""
-        current_idx = self.agents.index(self.agent_selection)
-        self.agent_selection = self.agents[(current_idx + 1) % len(self.agents)]
-
     def _check_termination(self):
         """Check if environment should terminate."""
         if self.agent_selection == self.negotiator:
@@ -288,28 +272,31 @@ class NegotiationEnv(AECEnv):
                 print(f"  Legitimacy: {state['legitimacy']}")
                 print(f"  Relationships: {state['relationships']}")
             print("="*50)
+    def close(self):
+        pass
 
 if __name__ == "__main__":
     # Test the environment
     env = NegotiationEnv(render_mode="human")
-    obs, _ = env.reset()
+    env.reset()
 
     print("\nInitial State:")
     env.render()
 
-    for step in range(10):
+    for step in range(5):
         print(f"\nStep {step + 1}")
         agent = env.agent_selection
+        obs = env.observe(agent)
         action_mask = obs["action_mask"]
         valid_actions = np.where(action_mask == 1)[0]
         action = np.random.choice(valid_actions)
 
-        obs, reward, terminated, truncated, _ = env.step(action)
+        env.step(action)
+        obs, reward, terminated, truncated, info = env.last()
 
         print(f"Agent: {agent}")
         print(f"Action: {action}")
         print(f"Reward: {reward}")
-        env.render()
 
         if terminated or truncated:
             print("\nEnvironment terminated!")

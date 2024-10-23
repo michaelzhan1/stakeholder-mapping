@@ -1,6 +1,6 @@
 from env.stakeholder_mapping_env import NegotiationEnv
 
-from pettingzoo.test import parallel_api_test, api_test
+from pettingzoo.test import api_test
 
 if __name__ == "__main__":
     env = NegotiationEnv()
