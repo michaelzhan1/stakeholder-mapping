@@ -8,9 +8,12 @@ class NegotationEnv(gym.Env):
     metadata = {"render_modes": ["human", "ansi"]}
 
     # init the environment
-    def __init__(self, render_mode='ansi'):
+    def __init__(self, power_array=None, render_mode='ansi'):
         # define stakeholders and powers. let 0 be the agent, and n-1 be the goal
-        self.powers = np.array([1, 5, 3, 10])
+        if power_array is None:
+            self.powers = np.array([1, 5, 3, 10])
+        else:
+            self.powers = np.array(power_array)
         self.n = len(self.powers)
 
         # actions: talk to each person (including self)

@@ -3,13 +3,21 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.utils import set_random_seed
 from single_agent_negotiation import NegotationEnv
 import numpy as np
+import pandas as pd
+
+# read csv for data first
+fname = "test.csv"
+df = pd.read_csv(fname, header=None, names=["Stakeholder", "Power", "Urgency", "Knowledge", "Legitimacy", "Position"])
+df['Total'] = df[['Power', 'Urgency', 'Knowledge', 'Legitimacy', 'Position']].sum(axis=1)
+
+total_powers = df['Total'].to_list()
 
 set_random_seed(0)
 
 # wrap in DummyVecEnv to make it compatible with stable_baselines3
 # then wrap in a VecMonitor to record statistics
 # then wrap in a VecVideoRecorder to record video
-env = make_vec_env(NegotationEnv, n_envs=1, env_kwargs={'render_mode': 'ansi'})
+env = make_vec_env(NegotationEnv, n_envs=1, env_kwargs={'render_mode': 'ansi', 'power_array': total_powers})
 
 # # define, learn, and save model
 model = PPO("MlpPolicy", env, verbose=1, gamma=1)
