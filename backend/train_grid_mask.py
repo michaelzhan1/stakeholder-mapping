@@ -23,11 +23,17 @@ model = MaskablePPO.load("ppo_model_masked")  # load model from zip
 obs = env.reset()[0]
 print("Starting final run")
 env.render()
+moves = {
+    0: "up",
+    1: "down",
+    2: "left",
+    3: "right"
+}
 while True:
     # run the final strategy
     action, _states = model.predict(obs, deterministic=True, action_masks=env.get_action_mask())
+    print(f"Last move: {moves[action.item()]}")
     obs, rewards, dones, truncated, info = env.step(action.item())
-    
     env.render()
     if dones:
         env.close() # make sure to close, otherwise errors occur with gymnasium

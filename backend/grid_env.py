@@ -37,6 +37,7 @@ class GridEnv(gym.Env):
     
     def reset(self, seed=0, **kwargs):
         super().reset(seed=seed)
+        np.random.seed(seed)
 
         self.start_xy = (0, 0)
         self.goal_xy = (self.nrow - 1, self.ncol - 1)
@@ -54,6 +55,11 @@ class GridEnv(gym.Env):
         row, col = self.agent_xy
 
         dx, dy = self.MOVES[action]
+
+        if (np.random.rand() < 0.5):
+            self.n_iter += 1
+            self.reward = -0.1
+            return self.get_obs(), self.reward, self.done, False, self.get_info()
 
         new_row, new_col = row + dx, col + dy
 
