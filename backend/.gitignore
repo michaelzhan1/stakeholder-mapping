@@ -3,3 +3,7 @@
 videos/
 *.zip
 __pycache__/
+
+*.out
+*_tensorboard/
+data/

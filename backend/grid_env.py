@@ -34,7 +34,7 @@ class GridEnv(gym.Env):
         # define a render mode (otherwise sb3 is unhappy)
         self.render_mode = render_mode
     
-    def reset(self, seed=0):
+    def reset(self, seed=0, **kwargs):
         super().reset(seed=seed)
 
         self.start_xy = (0, 0)
@@ -130,7 +130,7 @@ class GridEnv(gym.Env):
             return -1
         if (x, y) == self.goal_xy:
             return 1
-        return 0
+        return -0.1
 
     def get_obs(self):
         x, y = self.agent_xy
@@ -145,3 +145,15 @@ class GridEnv(gym.Env):
     
     def get_pos(self):
         return self.agent_xy
+    
+    def get_action_mask(self):
+        mask = np.ones(4)
+        if self.agent_xy[0] == 0:
+            mask[0] = 0
+        if self.agent_xy[0] == self.nrow - 1:
+            mask[1] = 0
+        if self.agent_xy[1] == 0:
+            mask[2] = 0
+        if self.agent_xy[1] == self.ncol - 1:
+            mask[3] = 0
+        return mask
