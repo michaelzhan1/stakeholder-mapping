@@ -2,6 +2,7 @@ import gymnasium as gym
 from gymnasium import spaces
 import cv2
 import numpy as np
+from stable_baselines3.common.env_checker import check_env
 
 PIXEL_SIZE = 50
 
@@ -157,3 +158,7 @@ class GridEnv(gym.Env):
         if self.agent_xy[1] == self.ncol - 1:
             mask[3] = 0
         return mask
+    
+if __name__ == "__main__":
+    env = GridEnv()
+    check_env(env)
