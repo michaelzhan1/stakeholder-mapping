@@ -167,12 +167,12 @@ class NegotiationEnv(AECEnv):
         match outcome:
             case Outcome.SUCCESS:
                 if agent == self.primary and recipient == self.target:
-                    return 10
+                    return 5
                 else:
                     recipient_state = self.stakeholders[recipient]
                     return recipient_state['power'] + recipient_state['knowledge'] + recipient_state['urgency'] + recipient_state['legitimacy']
             case Outcome.EXISTING:
-                return -3
+                return -5
             case Outcome.SELF:
                 return -1
             case Outcome.FAILURE:
