@@ -114,7 +114,7 @@ class NegotiationEnv(AECEnv):
             return {
                 "agent_1": {
                     "position": 1, "power": 0, "knowledge": 1, "urgency": 1, "legitimacy": 1,
-                    "relationships": np.array([0, 0, 1], dtype=np.int8)
+                    "relationships": np.array([1, 0, 0], dtype=np.int8)
                 },
                 "agent_2": {
                     "position": 0, "power": 2, "knowledge": 1, "urgency": 0, "legitimacy": 1,
@@ -122,7 +122,7 @@ class NegotiationEnv(AECEnv):
                 },
                 "agent_3": {
                     "position": -1, "power": 2, "knowledge": 2, "urgency": 1, "legitimacy": 1,
-                    "relationships": np.array([1, 0, 0], dtype=np.int8)
+                    "relationships": np.array([0, 0, 1], dtype=np.int8)
                 }
             }
         else:
@@ -164,14 +164,17 @@ class NegotiationEnv(AECEnv):
 
 
     def _calculate_reward(self, agent, recipient, outcome):
-        # TODO: placeholder for now
         match outcome:
             case Outcome.SUCCESS:
-                return 1
+                if agent == self.primary and recipient == self.target:
+                    return 10
+                else:
+                    recipient_state = self.stakeholders[recipient]
+                    return recipient_state['power'] + recipient_state['knowledge'] + recipient_state['urgency'] + recipient_state['legitimacy']
             case Outcome.EXISTING:
-                return -10
+                return -3
             case Outcome.SELF:
-                return -10
+                return -1
             case Outcome.FAILURE:
                 return -0.1
     
