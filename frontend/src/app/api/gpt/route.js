@@ -18,7 +18,6 @@ export async function POST(request) {
   });
 
   let responseBody = completion.choices[0].message.content;
-  console.log(responseBody);
 
   return new Response(responseBody, {
     status: 200
