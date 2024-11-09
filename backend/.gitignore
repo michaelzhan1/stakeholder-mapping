@@ -3,6 +3,5 @@
 
 *.zip
 *.out
-data/
 *_tensorboard/
 log/
