@@ -4,8 +4,7 @@ const openai = new OpenAI();
 
 // expect a json object
 export async function POST(request) {
-  const body = await request.json();
-  const { input } = body;
+  const input = await request.text();
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",

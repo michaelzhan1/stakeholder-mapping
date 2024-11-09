@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import pdfToText from "react-pdftotext";
+
 const POSITION_DEF = "Position (-1: Opposed, 0: Neutral, 1: Supportive): Position refers to the stakeholder's stance on the issue relative to the primary stakeholder, based on their actions.\n" +
 "- Opposed (-1): The stakeholder actively works against the objectives of the primary stakeholder.\n" +
 "- Neutral (0): The stakeholder does not take a definitive stance relative to the primary stakeholder.\n" +
@@ -47,29 +49,39 @@ const EXTRACTION_PROMPT_CORE = "Given the following text data, identify the key 
 "\n";
 
 export default function SampleInputAndResponse ({ className }) {
-  const [response, setResponse] = useState(null);
+  const [usePdf, setUsePdf] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [response, setResponse] = useState(null);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    let input = e.target.input.value;
-
-    const full_prompt = EXTRACTION_PROMPT_CORE + `Text data:\n${input}`;
-
+  const callGPT = async (textInput) => {
     setLoading(true);
 
     // make api call
     const response = await fetch("/api/gpt", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ input: full_prompt })
+      body: textInput
     });
     const output = await response.text();
 
     setResponse(output);
     setLoading(false);
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    let input = e.target.input.value;
+
+    const textInput = EXTRACTION_PROMPT_CORE + `Text data:\n${input}`;
+    callGPT(textInput);
+  }
+
+  const handleSubmitPDF = async (e) => {
+    e.preventDefault();
+    let file = e.target.file.files[0];
+    pdfToText(file).then(async (text) => {
+      const textInput = EXTRACTION_PROMPT_CORE + `Text data:\n${text}`;
+      callGPT(textInput);
+    });
   }
 
   // Define button states
@@ -80,17 +92,30 @@ export default function SampleInputAndResponse ({ className }) {
     <>
       <div className={className}>
         {/* TODO: popup modal that lets you view definitions*/}
-        <form onSubmit={handleSubmit} className="flex flex-col items-start">
-          <textarea name="input" placeholder="Input prompt here" required className="border-2 border-black w-1/2" />
-          <button type="submit" className={loading ? inactiveButtonClass : activeButtonClass} disabled={loading}>Submit</button>
-        </form>
+        {usePdf ?
+            <button onClick={() => setUsePdf(false)} className="text-blue-500 underline">Use text input</button>
+            :
+            <button onClick={() => setUsePdf(true)} className="text-blue-500 underline">Use PDF input (experimental)</button>
+        }
+
+        {usePdf ?
+          <form onSubmit={handleSubmitPDF} className="flex flex-col items-start">
+            <input type="file" name="file" accept=".pdf" required className="border-2 border-black w-1/2" />
+            <button type="submit" className={loading ? inactiveButtonClass : activeButtonClass} disabled={loading}>Submit PDF</button>
+          </form>
+          :
+          <form onSubmit={handleSubmit} className="flex flex-col items-start">
+            <textarea name="input" placeholder="Input prompt here" required className="border-2 border-black w-1/2" />
+            <button type="submit" className={loading ? inactiveButtonClass : activeButtonClass} disabled={loading}>Submit</button>
+          </form>
+        }
 
         <div className="font-bold">Response</div>
-        {response ?
-          <div className="whitespace-pre-wrap">{response}</div>
+        {loading ?
+          <div className="text-gray-500">Loading...</div>
           :
-          (loading ?
-            <div className="text-gray-500">Loading...</div>
+          (response ?
+            <div className="whitespace-pre-wrap">{response}</div>
             :
             <div className="text-gray-500">No response yet</div>
           )
