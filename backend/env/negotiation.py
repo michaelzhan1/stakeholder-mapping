@@ -173,19 +173,20 @@ class NegotiationEnv(AECEnv):
             return Outcome.SUCCESS
         return Outcome.FAILURE
     
-    def _calculate_prob_helper(self, recipient, stakeholder_idx):
+    def _calculate_prob_helper(self, recipient, stakeholder):  
         """Calculate the reward of the recipient got from accepting a relationship from a stakeholder"""
-        stakeholder_info = self.stakeholders[self.idx_to_agent[stakeholder_idx]]
+        stakeholder_info = self.stakeholders[stakeholder]
+        recipient_info = self.stakeholders[recipient]
 
-        reward = - w_position * abs(stakeholder_info['position'] - recipient['position']) +\      
-            w_power * stakeholder_info['power'] +\ 
-            w_knowledge * stakeholder_info['knowledge'] +\  
-            w_urgency * stakeholder_info['urgency'] +\    
-            w_legitimacy * stakeholder_info['legitimacy'] 
+        reward = (- w_position * abs(stakeholder_info['position'] - recipient_info['position']) +      
+            w_power * stakeholder_info['power'] +
+            w_knowledge * stakeholder_info['knowledge'] +
+            w_urgency * stakeholder_info['urgency'] +
+            w_legitimacy * stakeholder_info['legitimacy'] )
         
         if recipient == self.primary:
             # d = nx.shortest_path_length(self.graph, agent, self.target)
-            d = self._calculate_distance_to_target(stakeholder_info)
+            d = self._calculate_distance_to_target(stakeholder)
             reward += w_distance * (1/ (1 + d)) # d is distance between individual and target
 
         return reward
@@ -215,7 +216,7 @@ class NegotiationEnv(AECEnv):
         all_neighbors = set(direct_neighbors).union(indirect_neighbors)
 
         # Calculate the weighted reward for the recipient
-        coalition_reward += self._calculate_prob_helper(recipient, agent_idx)  # e^0 = 1
+        coalition_reward += self._calculate_prob_helper(recipient, agent)  # e^0 = 1
 
         # Calculate the weighted reward for direct and indirect neighbors
         for stakeholder in all_neighbors:
@@ -233,20 +234,21 @@ class NegotiationEnv(AECEnv):
 
         return standardized_reward
 
-    def _calculate_reward_individual(self, agent, stakeholder_idx):
+    def _calculate_reward_individual(self, agent, stakeholder):
         """Calculate the base value of a stakeholder based on their attributes."""
 
-        stakeholder_info = self.stakeholders[self.idx_to_agent[stakeholder_idx]]
+        agent_info = self.stakeholders[agent]
+        stakeholder_info = self.stakeholders[stakeholder]
 
-        reward = w_position * abs(stakeholder_info['position'] - agent['position']) +\      
-            w_power * stakeholder_info['power'] +\
-            w_knowledge * stakeholder_info['knowledge'] +\   
-            w_urgency * stakeholder_info['urgency'] +\     
-            w_legitimacy * stakeholder_info['legitimacy'] 
+        reward = (w_position * abs(stakeholder_info['position'] - agent_info['position']) +  
+            w_power * stakeholder_info['power'] +
+            w_knowledge * stakeholder_info['knowledge'] +
+            w_urgency * stakeholder_info['urgency'] + 
+            w_legitimacy * stakeholder_info['legitimacy'] )
         
         if agent == self.primary:
             # d = nx.shortest_path_length(self.graph, agent, self.target)
-            d = self._calculate_distance_to_target(stakeholder_info)
+            d = self._calculate_distance_to_target(stakeholder)
             reward += w_distance * (1/ (1 + d)) # d is distance between individual and target
         
         return reward
