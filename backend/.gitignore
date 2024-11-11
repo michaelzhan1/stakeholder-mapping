@@ -1,2 +1,7 @@
 .venv/
 *.pyc
+
+*.zip
+*.out
+*_tensorboard/
+log/
