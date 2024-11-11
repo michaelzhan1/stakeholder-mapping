@@ -1,13 +1,10 @@
-import SampleInputAndResponse from "@/components/SampleInputAndResponse";
+import TextStakeholderExtract from "@/components/TextStakeholderExtract";
 
 
 export default function Home() {
   return (
     <>
-      <div>
-        Hello, world!
-      </div>
-      <SampleInputAndResponse className="mt-3" />
+      <TextStakeholderExtract className="mt-3" />
     </>
   );
 }
