@@ -162,6 +162,10 @@ class NegotiationEnv(AECEnv):
             return stakeholders
 
     def _engage(self, agent, recipient):
+        # always make target actions fail
+        if agent == self.target:
+            return Outcome.FAILURE
+
         if agent == recipient:
             return Outcome.SELF
         if self.stakeholders[agent]['relationships'][self.agent_to_idx[recipient]] == 1:
@@ -226,7 +230,7 @@ class NegotiationEnv(AECEnv):
             coalition_reward += weight * individual_reward
 
         # Convert coalition reward into a probability
-        standardized_reward = coalition_reward / standardisation_factor
+        standardized_reward = (coalition_reward / standardisation_factor) ** 1.2
         if standardized_reward <= 0:
             return 0
         elif standardized_reward > 1:
