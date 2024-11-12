@@ -11,9 +11,9 @@ from tianshou.env import DummyVectorEnv
 from tianshou.env.pettingzoo_env import PettingZooEnv
 from tianshou.policy import BasePolicy, DQNPolicy, MultiAgentPolicyManager
 from tianshou.trainer import offpolicy_trainer
-from tianshou.utils import TensorboardLogger
+# from tianshou.utils import TensorboardLogger
 from tianshou.utils.net.common import Net
-from torch.utils.tensorboard import SummaryWriter   # TODO: stop writing log for flask
+# from torch.utils.tensorboard import SummaryWriter   # TODO: stop writing log for flask
 
 from env.negotiation import NegotiationEnv
 from env.negotiation import Outcome
@@ -147,9 +147,9 @@ def train_agent(
 
     # ======== tensorboard logging setup =========
     log_path = os.path.join(args.logdir, "negotiate", "dqn")
-    writer = SummaryWriter(log_path)
-    writer.add_text("args", str(args))
-    logger = TensorboardLogger(writer)
+    # writer = SummaryWriter(log_path)
+    # writer.add_text("args", str(args))
+    # logger = TensorboardLogger(writer)
 
     # ======== callback functions used during training =========
     def save_best_fn(policy):
@@ -190,7 +190,7 @@ def train_agent(
         # stop_fn=stop_fn,
         save_best_fn=save_best_fn,
         update_per_step=args.update_per_step,
-        logger=logger,
+        # logger=logger,
         test_in_train=False,
         reward_metric=reward_metric
     )
@@ -198,15 +198,12 @@ def train_agent(
     return result, policy.policies
 
 def train(data):
-    # data is blank csv text
-    lines = data.split("\n")
-    stakeholder_data = [list(map(int, line.split(","))) for line in lines if line] # TODO: let get_env handle the data
-
     args = get_args()
-    result, policies = train_agent(args, stakeholder_vals=stakeholder_data)
+    result, policies = train_agent(args, stakeholder_vals=data)
     return policies
 
 def run(data):
+    res = ""
     policies = train(data)
     env = get_env(data)
     obs, info = env.reset()
@@ -217,11 +214,16 @@ def run(data):
         action = policy.forward(batch=Batch(obs=[obs], info=[info])).act[0]
 
         recipient = f'agent_{action + 1}'
-        print(f'{agent} targeting {recipient}')
-        print(env.env.observe(None))
-        print()
+        res += f'{agent} targeting {recipient}\n'
+        res += str(env.env.observe(None)) + '\n'
+        res += '\n'
         
         obs, rew, done, truncated, info = env.step(action)
-    print('Final state:')
-    print(env.env.observe(None))
+    res += 'Final state:\n'
+    res += str(env.env.observe(None)) + '\n'
     env.close()
+    return res
+
+if __name__ == "__main__":
+    data = pd.read_csv('data/test.csv', header=None).values
+    print(run(data))
