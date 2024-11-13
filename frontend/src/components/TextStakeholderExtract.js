@@ -90,6 +90,7 @@ export default function SampleInputAndResponse ({ className }) {
 
   return (
     <>
+      <div className="font-bold text-lg">Stakeholder Extraction</div>
       <div className={className}>
         {/* TODO: popup modal that lets you view definitions*/}
         {usePdf ?
@@ -100,7 +101,7 @@ export default function SampleInputAndResponse ({ className }) {
 
         {usePdf ?
           <form onSubmit={handleSubmitPDF} className="flex flex-col items-start">
-            <input type="file" name="file" accept=".pdf" required className="border-2 border-black w-1/2" />
+            <input type="file" name="file" accept=".pdf" required className="" />
             <button type="submit" className={loading ? inactiveButtonClass : activeButtonClass} disabled={loading}>Submit PDF</button>
           </form>
           :
@@ -117,7 +118,7 @@ export default function SampleInputAndResponse ({ className }) {
           (response ?
             <div className="whitespace-pre-wrap">{response}</div>
             :
-            <div className="text-gray-500">No response yet</div>
+            <div className="text-gray-500">No LLM response yet</div>
           )
         }
       </div>
