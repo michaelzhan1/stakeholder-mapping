@@ -15,6 +15,7 @@ executing==2.1.0
 Farama-Notifications==0.0.4
 filelock==3.16.1
 Flask==3.0.3
+Flask-Cors==5.0.0
 fonttools==4.54.1
 fsspec==2024.10.0
 grpcio==1.67.1
