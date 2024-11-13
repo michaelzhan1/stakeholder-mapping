@@ -23,3 +23,15 @@ The primary stakeholder is whichever stakeholder is in the first row, and the ta
 ### test_negotiate.ipynb
 
 The code to train on the RL environment. This is based on the Tianshou Tic-Tac-Toe tutorial, and probably contains more hyperparameter tunings than are necessary at the moment. It currently trains a policy on the RL environment, then steps through and prints outputs for one round of the negotiation.
+
+### train.py
+
+Code adapted from the Jupyter notebook, modified for use with the Flask server.
+
+### app.py
+
+Code for the flask API endpoint, to be called by the frontend.
+
+### .env (not tracked by git)
+
+Holds environment variables for app.py

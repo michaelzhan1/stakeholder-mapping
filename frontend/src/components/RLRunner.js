@@ -15,8 +15,11 @@ export default function SampleInputAndResponse ({ className }) {
     // make api call
     const response = await fetch(process.env.NEXT_PUBLIC_RL_API_ENDPOINT, {
       method: "POST",
-      body: input
-    })
+      body: input,
+      headers: {
+        "Content-Type": "text/plain"
+      }
+    });
 
     const output = await response.text();
     setResponse(output);
@@ -37,7 +40,7 @@ export default function SampleInputAndResponse ({ className }) {
 
         <div className="font-bold">Response</div>
         {loading ?
-          <div className="text-gray-500">Loading...</div>
+          <div className="text-gray-500">Running RL...</div>
           :
           (response ?
             <div className="whitespace-pre-wrap">{response}</div>
