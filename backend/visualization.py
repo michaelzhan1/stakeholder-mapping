@@ -2,6 +2,7 @@ import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+from matplotlib import animation as anim
 from matplotlib.lines import Line2D
 from IPython.display import HTML
 
@@ -33,6 +34,7 @@ class AnimatedGraph:
 
         self.ax.set_title(f"Stakeholder Network Graph at Timestep {frame + 1}")
 
+        # TODO: encode as (None, None)? 
         if isinstance(self.actions[frame], tuple):
             (negotiator, recipient) = self.actions[frame]
             subtitle = f'{self.node_labels[negotiator]} reaches out to {self.node_labels[recipient]}'
@@ -60,9 +62,14 @@ class AnimatedGraph:
         
 
 
-    def animate(self):
+    def animate(self, save=False, return_html=False):
         ani = FuncAnimation(self.fig, self.update, frames=len(self.adj_matrices),
                             interval=self.interval, repeat=True)
-        return HTML(ani.to_jshtml())
+        
+        if save:
+            writer = anim.PillowWriter(fps=0.67)
+            ani.save("stakeholder_network.gif", writer=writer)
+        if return_html:
+            return HTML(ani.to_jshtml())
 
 
