@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 
-export default function SampleInputAndResponse ({ className }) {
+export default function RLRunner ({ className }) {
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState(null);
+  const [gifUrl, setGifUrl] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,6 +24,15 @@ export default function SampleInputAndResponse ({ className }) {
 
     const output = await response.text();
     setResponse(output);
+
+    // make api call for gif
+    const gifResponse = await fetch(process.env.NEXT_PUBLIC_RL_API_ENDPOINT + "/gif", {
+      method: "POST"
+    });
+    const blob = await gifResponse.blob();
+    const url = URL.createObjectURL(blob);
+    setGifUrl(url);
+
     setLoading(false);
   }
 
@@ -43,8 +53,11 @@ export default function SampleInputAndResponse ({ className }) {
         {loading ?
           <div className="text-gray-500">Running RL...</div>
           :
-          (response ?
-            <div className="whitespace-pre-wrap">{response}</div>
+          (response && gifUrl ?
+            <>
+              <img src={gifUrl} alt="RL gif" className="w-1/2" />
+              <div className="whitespace-pre-wrap">{response}</div>
+            </>
             :
             <div className="text-gray-500">No RL response yet</div>
           )

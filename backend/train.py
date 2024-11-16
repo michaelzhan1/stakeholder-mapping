@@ -202,7 +202,7 @@ def train(data):
     result, policies = train_agent(args, stakeholder_vals=data)
     return policies
 
-def run(data):
+def run(data, save=False):
     res = ""
     policies = train(data)
     env = get_env(data)
@@ -244,10 +244,11 @@ def run(data):
 
     env.close()
 
-    labels = {i: env.env.idx_to_agent[i] for i in range(env.env.n_agents)}
-    AnimatedGraph(adj_matrices, actions, node_labels=labels).animate(save=True)
+    if save:
+        labels = {i: env.env.idx_to_agent[i] for i in range(env.env.n_agents)}
+        AnimatedGraph(adj_matrices, actions, node_labels=labels).animate(save=True)
     return res
 
 if __name__ == "__main__":
     data = pd.read_csv('data/test.csv', header=None).values
-    print(run(data))
+    print(run(data, save=True))
