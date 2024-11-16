@@ -31,10 +31,8 @@ class AnimatedGraph:
         
         nx.draw_networkx_labels(G, self.pos, labels=self.node_labels, font_size=12, font_color="black", ax=self.ax)
 
-
         self.ax.set_title(f"Stakeholder Network Graph at Timestep {frame + 1}")
 
-        # TODO: encode as (None, None)? 
         if isinstance(self.actions[frame], tuple):
             (negotiator, recipient) = self.actions[frame]
             subtitle = f'{self.node_labels[negotiator]} reaches out to {self.node_labels[recipient]}'

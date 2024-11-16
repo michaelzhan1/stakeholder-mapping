@@ -11,9 +11,7 @@ from tianshou.env import DummyVectorEnv
 from tianshou.env.pettingzoo_env import PettingZooEnv
 from tianshou.policy import BasePolicy, DQNPolicy, MultiAgentPolicyManager
 from tianshou.trainer import offpolicy_trainer
-# from tianshou.utils import TensorboardLogger
 from tianshou.utils.net.common import Net
-# from torch.utils.tensorboard import SummaryWriter
 
 from env.negotiation import NegotiationEnv
 from visualization import AnimatedGraph
@@ -142,14 +140,7 @@ def train_agent(
         exploration_noise=True,
     )
     test_collector = Collector(policy, test_envs, exploration_noise=True)
-    # policy.set_eps(1)
     train_collector.collect(n_step=args.batch_size * args.training_num)
-
-    # ======== tensorboard logging setup =========
-    log_path = os.path.join(args.logdir, "negotiate", "dqn")
-    # writer = SummaryWriter(log_path)
-    # writer.add_text("args", str(args))
-    # logger = TensorboardLogger(writer)
 
     # ======== callback functions used during training =========
     def save_best_fn(policy):
@@ -162,9 +153,6 @@ def train_agent(
         torch.save(
             policy.policies[agents[args.agent_id - 1]].state_dict(), model_save_path
         )
-
-    def stop_fn(mean_rewards):
-        return mean_rewards >= args.win_rate
 
     def train_fn(epoch, env_step):
         policy.policies[agents[args.agent_id - 1]].set_eps(args.eps_train)
@@ -187,10 +175,8 @@ def train_agent(
         args.batch_size,
         train_fn=train_fn,
         test_fn=test_fn,
-        # stop_fn=stop_fn,
         save_best_fn=save_best_fn,
         update_per_step=args.update_per_step,
-        # logger=logger,
         test_in_train=False,
         reward_metric=reward_metric
     )
