@@ -8,17 +8,17 @@ from pettingzoo.test import api_test
 
 from enum import Enum
 
-# Define global weights
-w_position = 0.5
-w_power = 5
-w_knowledge = 0.5
-w_urgency = 6
-w_legitimacy = 8
-w_distance = 14
+# # Define global weights
+# w_position = 0.5
+# w_power = 5
+# w_knowledge = 0.5
+# w_urgency = 6
+# w_legitimacy = 8
+# w_distance = 14
 
-# The probability of success given you have max(power, urgency, legitimacy) but no relationships
-prob_success_alone = 0.6
-standardisation_factor = (2 * w_power + w_urgency + w_legitimacy) / prob_success_alone
+# # The probability of success given you have max(power, urgency, legitimacy) but no relationships
+# prob_success_alone = 0.6
+# standardisation_factor = (2 * w_power + w_urgency + w_legitimacy) / prob_success_alone
 
 
 class Outcome(Enum):
@@ -34,12 +34,49 @@ class NegotiationEnv(AECEnv):
         "is_parallelizable": False
     }
     
-    def __init__(self, stakeholder_matrix=None, render_mode=None):
+    def __init__(self, stakeholder_matrix=None, render_mode=None, weights=None):
         # init agent info
         self.stakeholders = self._init_stakeholders(stakeholder_matrix)
         self.n_agents = len(self.stakeholders)
         self.agents = [f"agent_{idx + 1}" for idx in range(self.n_agents)]
         self.possible_agents = self.agents[:]
+
+        # Define global weights
+        self.w_position = 0.5
+        self.w_power = 5
+        self.w_knowledge = 0.5
+        self.w_urgency = 6
+        self.w_legitimacy = 8
+        self.w_distance = 14
+        self.prob_success_alone = 0.6
+        self.direct = 0.4
+        self.indirect = 0.1
+        
+
+        # parse weights ## FOR EVALUATION
+        if weights:
+            if 'w_position' in weights.keys():
+                self.w_position = weights['w_position']
+            if 'w_power' in weights.keys():
+                self.w_power = weights['w_power']
+            if 'w_knowledge' in weights.keys():
+                self.w_knowledge = weights['w_knowledge']
+            if 'w_urgency' in weights.keys():
+                self.w_urgency = weights['w_urgency']
+            if 'w_legitimacy' in weights.keys():
+                self.w_legitimacy = weights['w_legitimacy']
+            if 'w_distance' in weights.keys():
+                self.w_distance = weights['w_distance']
+            if 'prob_success_alone' in weights.keys():
+                self.prob_success_alone = weights['prob_success_alone']
+            if 'direct' in weights.keys():
+                self.direct = weights['direct']
+            if 'indirect' in weights.keys():
+                self.indirect = weights['indirect']
+
+        self.standardisation_factor = (2 * self.w_power + self.w_urgency 
+            + self.w_legitimacy) / self.prob_success_alone
+
 
         # convenience mappings:
         self.agent_to_idx = {agent: idx for idx, agent in enumerate(self.agents)}
@@ -53,7 +90,7 @@ class NegotiationEnv(AECEnv):
         self.truncations = {agent: False for agent in self.agents}
         self.rewards = {agent: 0 for agent in self.agents}
         self._cumulative_rewards = {agent: 0 for agent in self.agents}
-        self.infos = {agent: {} for agent in self.agents}
+        self.infos = {agent: {} for agent in self.agents} 
 
         self._action_spaces = {agent: spaces.Discrete(self.n_agents) for agent in self.agents}
         self._observation_spaces = {agent: spaces.Box(low=0, high=1, shape=(self.n_agents, self.n_agents), dtype=np.int8) for agent in self.agents}
@@ -81,6 +118,14 @@ class NegotiationEnv(AECEnv):
 
         self.agent_selection = self._agent_selector.reset()
 
+        # track metrics
+        self.primary_steps = 0
+        self.final_prob_success = 0.05
+        self.metrics = None
+
+        # track agent actions
+        self.agent_actions = {agent: { 'actions':[] } for agent in self.agents} 
+
         for i in range(self.n_agents):
             agent = self.idx_to_agent[i]
             self.stakeholders[agent]['relationships'] = np.zeros(self.n_agents, dtype=np.int8)
@@ -96,13 +141,25 @@ class NegotiationEnv(AECEnv):
         recipient = self.idx_to_agent[action]
 
         outcome = self._engage(agent, recipient)
+
         self.rewards[agent] = self._calculate_reward(agent, recipient, outcome)
         self._accumulate_rewards()
+
+        # # track agent's actions:
+        self.agent_actions[agent]['actions'].append(action)
+
+        # track primary agent's steps
+        if agent == self.primary:
+            self.primary_steps += 1
 
         terminated = self._check_termination()
         if terminated:
             for i in range(self.n_agents):
                 self.terminations[self.idx_to_agent[i]] = True
+
+            # evaluation metric values
+            self.metrics = [self.primary_steps, self.final_prob_success]
+            self.infos[agent]['metrics'] = self.metrics
         
         self.agent_selection = self._agent_selector.next()
 
@@ -182,16 +239,16 @@ class NegotiationEnv(AECEnv):
         stakeholder_info = self.stakeholders[stakeholder]
         recipient_info = self.stakeholders[recipient]
 
-        reward = (- w_position * abs(stakeholder_info['position'] - recipient_info['position']) +      
-            w_power * stakeholder_info['power'] +
-            w_knowledge * stakeholder_info['knowledge'] +
-            w_urgency * stakeholder_info['urgency'] +
-            w_legitimacy * stakeholder_info['legitimacy'] )
+        reward = (- self.w_position * abs(stakeholder_info['position'] - recipient_info['position']) +      
+            self.w_power * stakeholder_info['power'] +
+            self.w_knowledge * stakeholder_info['knowledge'] +
+            self.w_urgency * stakeholder_info['urgency'] +
+            self.w_legitimacy * stakeholder_info['legitimacy'] )
         
         if recipient == self.primary:
             # d = nx.shortest_path_length(self.graph, agent, self.target)
             d = self._calculate_distance_to_target(stakeholder)
-            reward += w_distance * (1/ (1 + d)) # d is distance between individual and target
+            reward += self.w_distance * (1/ (1 + d)) # d is distance between individual and target
 
         return reward
 
@@ -225,35 +282,38 @@ class NegotiationEnv(AECEnv):
         # Calculate the weighted reward for direct and indirect neighbors
         for stakeholder in all_neighbors:
             degree_of_separation = 1 if stakeholder in direct_neighbors else 2
-            weight = math.exp(-degree_of_separation)
+            # weight = math.exp(-degree_of_separation)
+            weight = self.direct if degree_of_separation == 1 else self.indirect
             individual_reward = self._calculate_prob_helper(recipient, stakeholder)
             coalition_reward += weight * individual_reward
 
         # Convert coalition reward into a probability
-        standardized_reward = (coalition_reward / standardisation_factor) ** 1.2
-        if standardized_reward <= 0:
-            return 0
+        standardized_reward = (coalition_reward / self.standardisation_factor) ** 1.2
+        if standardized_reward <= 0.05:
+            standardized_reward = 0.05
         elif standardized_reward > 1:
-            return 1 
+            standardized_reward = 1 
+
+        # updates success probability for evaluation metric
+        if (agent == self.primary) and (recipient == self.target):
+            self.final_prob_success = standardized_reward
 
         return standardized_reward
 
     def _calculate_reward_individual(self, agent, stakeholder):
         """Calculate the base value of a stakeholder based on their attributes."""
 
-        agent_info = self.stakeholders[agent]
         stakeholder_info = self.stakeholders[stakeholder]
 
-        reward = (w_position * abs(stakeholder_info['position'] - agent_info['position']) +  
-            w_power * stakeholder_info['power'] +
-            w_knowledge * stakeholder_info['knowledge'] +
-            w_urgency * stakeholder_info['urgency'] + 
-            w_legitimacy * stakeholder_info['legitimacy'] )
+        reward = ( self.w_power * stakeholder_info['power'] +
+            self.w_knowledge * stakeholder_info['knowledge'] +
+            self.w_urgency * stakeholder_info['urgency'] + 
+            self.w_legitimacy * stakeholder_info['legitimacy'] )
         
         if agent == self.primary:
             # d = nx.shortest_path_length(self.graph, agent, self.target)
             d = self._calculate_distance_to_target(stakeholder)
-            reward += w_distance * (1/ (1 + d)) # d is distance between individual and target
+            reward += self.w_distance * (1/ (1 + d)) # d is distance between individual and target
         
         return reward
     
@@ -318,7 +378,8 @@ class NegotiationEnv(AECEnv):
         # Calculate the weighted reward for direct and indirect neighbors
         for stakeholder in all_neighbors:
             degree_of_separation = 1 if stakeholder in direct_neighbors else 2
-            weight = math.exp(-degree_of_separation)
+            # weight = math.exp(-degree_of_separation)
+            weight = self.direct if degree_of_separation == 1 else self.indirect
             individual_reward = self._calculate_reward_individual(agent, stakeholder)
             coalition_reward += weight * individual_reward
 
@@ -336,7 +397,12 @@ class NegotiationEnv(AECEnv):
                 return -0.1
     
     def _check_termination(self):
-        return self.stakeholders[self.primary]['relationships'][self.agent_to_idx[self.target]] == 1
+        # truncate if primary takes more than 100 actions
+        if self.primary_steps > 100:
+            return True
+        # end if primary engages target
+        else:
+            return self.stakeholders[self.primary]['relationships'][self.agent_to_idx[self.target]] == 1
 
 
 if __name__ == "__main__":
