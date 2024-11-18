@@ -85,9 +85,10 @@ def get_args() -> argparse.Namespace:
 
 def get_agents(
     args: argparse.Namespace = get_args(),
-    stakeholder_vals: np.ndarray | None = None
+    stakeholder_vals: np.ndarray | None = None,
+    names: np.ndarray | None = None
 ) -> Tuple[BasePolicy, torch.optim.Optimizer, list]:
-    env = get_env(stakeholder_vals)
+    env = get_env(stakeholder_vals, names)
     observation_space = (
         env.observation_space["observation"]
         if isinstance(env.observation_space, gymnasium.spaces.Dict)
@@ -112,17 +113,18 @@ def get_agents(
     return policy, env.agents
 
 
-def get_env(data=None, render_mode=None):
-    return PettingZooEnv(NegotiationEnv(stakeholder_matrix=data, render_mode=render_mode))
+def get_env(data=None, names=None, render_mode=None):
+    return PettingZooEnv(NegotiationEnv(stakeholder_matrix=data, stakeholder_names=names, render_mode=render_mode))
 
 
 def train_agent(
     args: argparse.Namespace = get_args(),
-    stakeholder_vals: np.ndarray | None = None
+    stakeholder_vals: np.ndarray | None = None,
+    names: np.ndarray | None = None
 ) -> Tuple[dict, BasePolicy]:
     # ======== environment setup =========
-    train_envs = DummyVectorEnv([lambda: get_env(stakeholder_vals) for _ in range(args.training_num)])
-    test_envs = DummyVectorEnv([lambda: get_env(stakeholder_vals) for _ in range(args.test_num)])
+    train_envs = DummyVectorEnv([lambda: get_env(stakeholder_vals, names) for _ in range(args.training_num)])
+    test_envs = DummyVectorEnv([lambda: get_env(stakeholder_vals, names) for _ in range(args.test_num)])
     # seed
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -130,7 +132,7 @@ def train_agent(
     test_envs.seed(args.seed)
 
     # ======== agent setup =========
-    policy, agents = get_agents(args, stakeholder_vals)
+    policy, agents = get_agents(args, stakeholder_vals, names)
 
     # ======== collector setup =========
     train_collector = Collector(
@@ -183,15 +185,15 @@ def train_agent(
 
     return result, policy.policies
 
-def train(data):
+def train(data, names):
     args = get_args()
-    result, policies = train_agent(args, stakeholder_vals=data)
+    result, policies = train_agent(args, stakeholder_vals=data, names=names)
     return policies
 
-def run(data, save=False):
+def run(data, names, save=False):
     res = ""
-    policies = train(data)
-    env = get_env(data)
+    policies = train(data, names)
+    env = get_env(data, names)
     obs, info = env.reset()
     done = False
 
@@ -205,7 +207,7 @@ def run(data, save=False):
         action = policy.forward(batch=Batch(obs=[obs], info=[info])).act[0]
         
         agent_idx = env.env.agent_to_idx[agent]
-        recipient = f'agent_{action + 1}'
+        recipient = env.env.idx_to_agent[action]
 
         # text output
         res += f'{agent} targeting {recipient}\n'
@@ -236,5 +238,11 @@ def run(data, save=False):
     return res
 
 if __name__ == "__main__":
-    data = pd.read_csv('data/test.csv', header=None).values
-    print(run(data, save=True))
+    full_data = pd.read_csv('data/test.csv', header=None).values
+    if full_data.shape[1] == 6:
+        names = full_data[:, 0]
+        data = full_data[:, 1:]
+    else:
+        names = None
+        data = full_data
+    print(run(data, names, save=True))

@@ -20,20 +20,19 @@ class NegotiationEnv(AECEnv):
         "is_parallelizable": False
     }
     
-    def __init__(self, stakeholder_matrix=None, render_mode=None):
+    def __init__(self, stakeholder_matrix=None, stakeholder_names=None, render_mode=None):
         # init agent info
-        self.stakeholders = self._init_stakeholders(stakeholder_matrix)
+        self.stakeholders, self.possible_agents = self._init_stakeholders(stakeholder_matrix, stakeholder_names)
         self.n_agents = len(self.stakeholders)
-        self.agents = [f"agent_{idx + 1}" for idx in range(self.n_agents)]
-        self.possible_agents = self.agents[:]
+        self.agents = self.possible_agents[:]
 
         # convenience mappings:
         self.agent_to_idx = {agent: idx for idx, agent in enumerate(self.agents)}
         self.idx_to_agent = {idx: agent for idx, agent in enumerate(self.agents)}
 
         # define key stakeholders
-        self.primary = 'agent_1'
-        self.target = f'agent_{self.n_agents}'
+        self.primary = self.possible_agents[0]
+        self.target = self.possible_agents[-1]
 
         self.terminations = {agent: False for agent in self.agents}
         self.truncations = {agent: False for agent in self.agents}
@@ -108,10 +107,10 @@ class NegotiationEnv(AECEnv):
     # END API METHODS    #
     # ================== #
     
-    def _init_stakeholders(self, stakeholder_matrix):
+    def _init_stakeholders(self, stakeholder_matrix=None, agent_names=None):
+        # Default: Generate a simple set of stakeholders
         if stakeholder_matrix is None:
-            # Default: Generate a simple set of stakeholders
-            return {
+            stakeholders = {
                 "agent_1": {
                     "position": 1, "power": 0, "knowledge": 1, "urgency": 1, "legitimacy": 1,
                     "relationships": np.array([1, 0, 0], dtype=np.int8)
@@ -125,21 +124,26 @@ class NegotiationEnv(AECEnv):
                     "relationships": np.array([0, 0, 1], dtype=np.int8)
                 }
             }
-        else:
-            stakeholders = {}
-            n_agents = len(stakeholder_matrix)
-            for idx, row in enumerate(stakeholder_matrix):
-                name = f"agent_{idx + 1}"
-                stakeholders[name] = {
-                    "position": row[0],
-                    "power": row[1],
-                    "knowledge": row[2],
-                    "urgency": row[3],
-                    "legitimacy": row[4],
-                    "relationships": np.zeros(n_agents, dtype=int)
-                }
-                stakeholders[name]['relationships'][idx] = 1
-            return stakeholders
+            return stakeholders, ["agent_1", "agent_2", "agent_3"]
+        
+        n_agents = len(stakeholder_matrix)
+        if agent_names is None:
+            agent_names = [f"agent_{idx + 1}" for idx in range(n_agents)]
+        
+        stakeholders = {}
+        for i in range(n_agents):
+            row = stakeholder_matrix[i]
+            name = agent_names[i]
+            stakeholders[name] = {
+                "position": row[0],
+                "power": row[1],
+                "knowledge": row[2],
+                "urgency": row[3],
+                "legitimacy": row[4],
+                "relationships": np.zeros(n_agents, dtype=int)
+            }
+            stakeholders[name]['relationships'][i] = 1
+        return stakeholders, agent_names
 
     def _engage(self, agent, recipient):
         if agent == recipient:
