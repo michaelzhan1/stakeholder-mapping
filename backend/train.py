@@ -11,12 +11,10 @@ from tianshou.env import DummyVectorEnv
 from tianshou.env.pettingzoo_env import PettingZooEnv
 from tianshou.policy import BasePolicy, DQNPolicy, MultiAgentPolicyManager
 from tianshou.trainer import offpolicy_trainer
-# from tianshou.utils import TensorboardLogger
 from tianshou.utils.net.common import Net
-# from torch.utils.tensorboard import SummaryWriter   # TODO: stop writing log for flask
 
 from env.negotiation import NegotiationEnv
-from env.negotiation import Outcome
+from visualization import AnimatedGraph
 
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
@@ -142,14 +140,7 @@ def train_agent(
         exploration_noise=True,
     )
     test_collector = Collector(policy, test_envs, exploration_noise=True)
-    # policy.set_eps(1)
     train_collector.collect(n_step=args.batch_size * args.training_num)
-
-    # ======== tensorboard logging setup =========
-    log_path = os.path.join(args.logdir, "negotiate", "dqn")
-    # writer = SummaryWriter(log_path)
-    # writer.add_text("args", str(args))
-    # logger = TensorboardLogger(writer)
 
     # ======== callback functions used during training =========
     def save_best_fn(policy):
@@ -162,9 +153,6 @@ def train_agent(
         torch.save(
             policy.policies[agents[args.agent_id - 1]].state_dict(), model_save_path
         )
-
-    def stop_fn(mean_rewards):
-        return mean_rewards >= args.win_rate
 
     def train_fn(epoch, env_step):
         policy.policies[agents[args.agent_id - 1]].set_eps(args.eps_train)
@@ -187,10 +175,8 @@ def train_agent(
         args.batch_size,
         train_fn=train_fn,
         test_fn=test_fn,
-        # stop_fn=stop_fn,
         save_best_fn=save_best_fn,
         update_per_step=args.update_per_step,
-        # logger=logger,
         test_in_train=False,
         reward_metric=reward_metric
     )
@@ -202,28 +188,53 @@ def train(data):
     result, policies = train_agent(args, stakeholder_vals=data)
     return policies
 
-def run(data):
+def run(data, save=False):
     res = ""
     policies = train(data)
     env = get_env(data)
     obs, info = env.reset()
     done = False
+
+    # track for gif
+    adj_matrices = []
+    actions = []
+
     while not done:
         agent = env.env.agent_selection
         policy = policies[agent]
         action = policy.forward(batch=Batch(obs=[obs], info=[info])).act[0]
-
+        
+        agent_idx = env.env.agent_to_idx[agent]
         recipient = f'agent_{action + 1}'
+
+        # text output
         res += f'{agent} targeting {recipient}\n'
         res += str(env.env.observe(None)) + '\n'
         res += '\n'
+
+        # gif frame
+        adj_matrix = env.env.observe(None)
+        np.fill_diagonal(adj_matrix, 0)
+        adj_matrices.append(adj_matrix)
+        actions.append((agent_idx, action))
         
         obs, rew, done, truncated, info = env.step(action)
+
     res += 'Final state:\n'
     res += str(env.env.observe(None)) + '\n'
+
+    final_state = env.env.observe(None)
+    np.fill_diagonal(final_state, 0)
+    adj_matrices.append(final_state)
+    actions.append("Final State")
+
     env.close()
+
+    if save:
+        labels = {i: env.env.idx_to_agent[i] for i in range(env.env.n_agents)}
+        AnimatedGraph(adj_matrices, actions, node_labels=labels).animate(save=True)
     return res
 
 if __name__ == "__main__":
     data = pd.read_csv('data/test.csv', header=None).values
-    print(run(data))
+    print(run(data, save=True))

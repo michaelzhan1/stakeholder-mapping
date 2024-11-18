@@ -1,4 +1,4 @@
-from flask import Flask, request, abort
+from flask import Flask, request, abort, send_file
 from flask_cors import CORS
 from dotenv import load_dotenv
 from train import run
@@ -18,5 +18,14 @@ def run_rl():
     data = request.get_data(as_text=True).replace("\\n", "\n")
     formatted_data = np.array([list(map(int, line.split(','))) for line in data.split('\n')])
 
-    output = run(formatted_data)
+    output = run(formatted_data, save=True)
     return output
+
+@app.route('/api/rl-endpoint/gif', methods=['POST'])
+def get_rl_gif():
+    fname = 'stakeholder_network.gif'
+
+    if not os.path.exists(fname):
+        abort(404, description='GIF not found')
+    
+    return send_file(fname, mimetype='image/gif')
