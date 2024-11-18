@@ -15,7 +15,7 @@ def run_rl():
     if request.content_type != 'text/plain':
         abort(400, description='Content-Type must be text/plain')
     
-    data = request.get_data(as_text=True).replace("\\n", "\n")
+    data = request.get_data(as_text=True).replace("\\n", "\n").strip()
     formatted_data = np.array([list(map(int, line.split(','))) for line in data.split('\n')])
 
     output = run(formatted_data, save=True)
