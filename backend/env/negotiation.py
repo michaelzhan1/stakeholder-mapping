@@ -63,6 +63,7 @@ class NegotiationEnv(AECEnv):
         self._agent_selector = agent_selector(self.agents)
         self.agent_selection = self._agent_selector.reset()
 
+
         # Initialize network graph for coalition tracking
         # self.graph = nx.Graph()
         # self.graph.add_nodes_from(self.agents)
@@ -80,6 +81,8 @@ class NegotiationEnv(AECEnv):
         self.infos = {agent: {} for agent in self.agents}
 
         self.agent_selection = self._agent_selector.reset()
+
+        self.primary_steps = 0
 
         for i in range(self.n_agents):
             agent = self.idx_to_agent[i]
@@ -231,8 +234,8 @@ class NegotiationEnv(AECEnv):
 
         # Convert coalition reward into a probability
         standardized_reward = (coalition_reward / standardisation_factor) ** 1.2
-        if standardized_reward <= 0:
-            return 0
+        if standardized_reward <= 0.05:
+            return 0.05
         elif standardized_reward > 1:
             return 1 
 
@@ -336,7 +339,12 @@ class NegotiationEnv(AECEnv):
                 return -0.1
     
     def _check_termination(self):
-        return self.stakeholders[self.primary]['relationships'][self.agent_to_idx[self.target]] == 1
+        # truncate if primary takes more than 100 actions
+        if self.primary_steps > 100:
+            return True
+        # end if primary engages target
+        else:
+            return self.stakeholders[self.primary]['relationships'][self.agent_to_idx[self.target]] == 1
 
 
 if __name__ == "__main__":
