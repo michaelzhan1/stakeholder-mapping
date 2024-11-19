@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export default function RLRunner ({ className }) {
+export default function RLRunner () {
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState(null);
   const [gifUrl, setGifUrl] = useState(null);
@@ -43,7 +43,7 @@ export default function RLRunner ({ className }) {
   return (
     <>
       <div className="font-bold mt-5 text-lg">Reinforcement Learning</div>
-      <div className={className}>
+      <div className='w-full'>
         <form onSubmit={handleSubmit} className="flex flex-col items-start">
           <textarea name="input" placeholder="Input Stakeholder Features (CSV format)" required className="border-2 border-black w-1/2" />
           <button type="submit" className={loading ? inactiveButtonClass : activeButtonClass} disabled={loading}>Submit</button>
