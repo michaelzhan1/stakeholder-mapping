@@ -29,14 +29,9 @@ const LEGITIMACY_DEF = "Legitimacy (0: Not Legitimate, 1: Legitimate): Legitimac
 
 const EXTRACTION_PROMPT_CORE = "Given the following text data, identify the key stakeholders involved in the negotiation and infer their attributes based on the definitions provided below. You do not have prior knowledge of the ground truth values, so you must analyze the text and make educated estimates about the stakeholders' values for Power, Urgency, Knowledge, Position, and Legitimacy.\n" +
 "\n" +
-"For each stakeholder, determine the following attribute and present the values in the following format. Your prediction must be from the available options for each attribute, make your best guess if necessary:\n" +
+"For each stakeholder, determine the following attributes and present the values in CSV format. Your prediction must be from the available options for each attribute, make your best guess if necessary. Do not use any markdown formatting, and only have the CSV data in raw text. Each row should look like the following:\n" +
 "\n" +
-"Stakeholder: Stakeholder name\n" +
-"- Power: (0, 1, or 2)\n" +
-"- Urgency: (0 or 1)\n" +
-"- Knowledge: (0, 1, or 2)\n" +
-"- Legitimacy: (0 or 1)\n" +
-"- Position: (-1, 0, or 1)\n" +
+"<Stakeholder name>,<Position: (-1, 0, or 1)>,<Power: (0, 1, or 2)>,<Urgency: (0 or 1)>,<Knowledge: (0, 1, or 2)>,<Legitimacy: (0 or 1)>\n" +
 "\n" +
 "Do not output any additional text. Use only the information implied in the text to make these determinations.\n" +
 "\n" +
