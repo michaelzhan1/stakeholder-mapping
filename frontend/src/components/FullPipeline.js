@@ -29,7 +29,7 @@ const LEGITIMACY_DEF = "Legitimacy (0: Not Legitimate, 1: Legitimate): Legitimac
 
 const EXTRACTION_PROMPT_CORE = "Given the following text data, identify the key stakeholders involved in the negotiation and infer their attributes based on the definitions provided below. You do not have prior knowledge of the ground truth values, so you must analyze the text and make educated estimates about the stakeholders' values for Power, Urgency, Knowledge, Position, and Legitimacy.\n" +
 "\n" +
-"For each stakeholder, determine the following attributes and present the values in CSV format. Your prediction must be from the available options for each attribute, make your best guess if necessary. Do not use any markdown formatting, and only have the CSV data in raw text. Ensure a stakeholder name does not have any commas, for the sake of the CSV. Each row should look like the following:\n" +
+"For each stakeholder, determine the following attributes and present the values in CSV format. Limit to 5 stakeholders. Your prediction must be from the available options for each attribute, make your best guess if necessary. Do not use any markdown formatting, and only have the CSV data in raw text. Ensure a stakeholder name does not have any commas, for the sake of the CSV. Each row should look like the following:\n" +
 "\n" +
 "<Stakeholder name>,<Position: (-1, 0, or 1)>,<Power: (0, 1, or 2)>,<Urgency: (0 or 1)>,<Knowledge: (0, 1, or 2)>,<Legitimacy: (0 or 1)>\n" +
 "\n" +
@@ -43,23 +43,43 @@ const EXTRACTION_PROMPT_CORE = "Given the following text data, identify the key 
 `${POSITION_DEF}\n` +
 "\n";
 
-export default function TextStakeholderExtract ({ className }) {
+export default function FullPipeline ({ className }) {
   const [usePdf, setUsePdf] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [response, setResponse] = useState(null);
+  const [llmLoading, setLlmLoading] = useState(false);
+  const [rlLoading, setRlLoading] = useState(false);
+  const [llmResponse, setLlmResponse] = useState(null);
+  const [rlResponse, setRlResponse] = useState(null);
+
+  const runRL = async (input) => {
+    setRlLoading(true);
+
+    const response = await fetch(process.env.NEXT_PUBLIC_RL_API_ENDPOINT, {
+      method: "POST",
+      body: input,
+      headers: {
+        "Content-Type": "text/plain"
+      }
+    });
+
+    const output = await response.text();
+    setRlResponse(output);
+
+    setRlLoading(false);
+  }
 
   const callGPT = async (textInput) => {
-    setLoading(true);
+    setLlmLoading(true);
 
-    // make api call
+    // make api call for LLM extraction
     const response = await fetch("/api/gpt", {
       method: "POST",
       body: textInput
     });
     const output = await response.text();
+    setLlmResponse(output);
+    setLlmLoading(false);
 
-    setResponse(output);
-    setLoading(false);
+    return output;
   }
 
   const handleSubmit = async (e) => {
@@ -67,14 +87,15 @@ export default function TextStakeholderExtract ({ className }) {
     let textInput = "";
     if (usePdf) {
       let file = e.target.file.files[0];
-      pdfToText(file).then(async (text) => {
-        textInput = EXTRACTION_PROMPT_CORE + `Text data:\n${text}`;
-      });
+      const text = await pdfToText(file);
+      textInput = EXTRACTION_PROMPT_CORE + `Text data:\n${text}`;
     } else {
       let input = e.target.input.value;
       textInput = EXTRACTION_PROMPT_CORE + `Text data:\n${input}`;
     }
-    callGPT(textInput);
+    
+    const gptOutput = await callGPT(textInput);
+    runRL(gptOutput);
   }
 
   // Define button states
@@ -95,23 +116,34 @@ export default function TextStakeholderExtract ({ className }) {
         {usePdf ?
           <form onSubmit={handleSubmit} className="flex flex-col items-start">
             <input type="file" name="file" accept=".pdf" required className="" />
-            <button type="submit" className={loading ? inactiveButtonClass : activeButtonClass} disabled={loading}>Submit PDF</button>
+            <button type="submit" className={(rlLoading || llmLoading) ? inactiveButtonClass : activeButtonClass} disabled={rlLoading || llmLoading}>Submit PDF</button>
           </form>
           :
           <form onSubmit={handleSubmit} className="flex flex-col items-start">
             <textarea name="input" placeholder="Input prompt here" required className="border-2 border-black w-1/2" />
-            <button type="submit" className={loading ? inactiveButtonClass : activeButtonClass} disabled={loading}>Submit</button>
+            <button type="submit" className={(rlLoading || llmLoading) ? inactiveButtonClass : activeButtonClass} disabled={rlLoading || llmLoading}>Submit</button>
           </form>
         }
 
-        <div className="font-bold">Response</div>
-        {loading ?
+        <div className="font-bold">LLM Response (limited to 5 stakeholders)</div>
+        {llmLoading ?
           <div className="text-gray-500">Loading...</div>
           :
-          (response ?
-            <div className="whitespace-pre-wrap">{response}</div>
+          (llmResponse ?
+            <div className="whitespace-pre-wrap">{llmResponse}</div>
             :
             <div className="text-gray-500">No LLM response yet</div>
+          )
+        }
+        
+        <div className="font-bold">RL Response</div>
+        {rlLoading ?
+          <div className="text-gray-500">Running RL...</div>
+          :
+          (rlResponse ?
+            <div className="whitespace-pre-wrap">{rlResponse}</div>
+            :
+            <div className="text-gray-500">No RL response yet</div>
           )
         }
       </div>
