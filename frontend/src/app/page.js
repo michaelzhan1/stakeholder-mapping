@@ -3,6 +3,7 @@
 import TextStakeholderExtract from "@/components/TextStakeholderExtract";
 import RLRunner from "@/components/RLRunner";
 import FullPipeline from "@/components/FullPipeline";
+import LLMInfoModal from "@/components/LLMInfoModal";
 
 import { useState } from "react";
 
@@ -17,13 +18,14 @@ export default function Home() {
         :
         <button onClick={() => setUseFullPipeline(true)} className="text-blue-500 underline mb-5">Use Full Pipeline</button>
       }
+      <LLMInfoModal />
       {useFullPipeline ?
+        <FullPipeline />
+        :
         <>
           <TextStakeholderExtract />
           <RLRunner />
         </>
-        :
-        <FullPipeline />
       }
     </>
   );
