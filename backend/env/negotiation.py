@@ -102,6 +102,10 @@ class NegotiationEnv(AECEnv):
         self.rewards[agent] = self._calculate_reward(agent, recipient, outcome)
         self._accumulate_rewards()
 
+        # track primary agent's steps
+        if agent == self.primary:
+            self.primary_steps += 1
+
         terminated = self._check_termination()
         if terminated:
             for i in range(self.n_agents):
