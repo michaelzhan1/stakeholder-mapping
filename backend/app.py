@@ -8,6 +8,9 @@ import os
 
 load_dotenv()
 
+if os.getenv('FRONTEND_URL') is None:
+    raise ValueError('FRONTEND_URL environment variable must be set in a .env file')
+
 app = Flask(__name__)
 CORS(app, origins=[os.getenv('FRONTEND_URL')])
 
