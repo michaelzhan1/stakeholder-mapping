@@ -6,7 +6,7 @@ import pdfToText from "react-pdftotext";
 
 import { EXTRACTION_PROMPT_CORE } from "@/components/LLMInfoModal";
 
-export default function TextStakeholderExtract ({ className }) {
+export default function TextStakeholderExtract () {
   const [usePdf, setUsePdf] = useState(false);
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState(null);
@@ -47,7 +47,7 @@ export default function TextStakeholderExtract ({ className }) {
   return (
     <>
       <div className="font-bold text-lg">Stakeholder Extraction</div>
-      <div className={className}>
+      <div className='w-full'>
         {/* TODO: popup modal that lets you view definitions*/}
         {usePdf ?
             <button onClick={() => setUsePdf(false)} className="text-blue-500 underline">Use text input</button>
@@ -61,7 +61,7 @@ export default function TextStakeholderExtract ({ className }) {
             <button type="submit" className={loading ? inactiveButtonClass : activeButtonClass} disabled={loading}>Submit PDF</button>
           </form>
           :
-          <form onSubmit={handleSubmit} className="flex flex-col items-start">
+          <form onSubmit={handleSubmit} className="flex flex-col items-start w-full">
             <textarea name="input" placeholder="Input prompt here" required className="border-2 border-black w-1/2" />
             <button type="submit" className={loading ? inactiveButtonClass : activeButtonClass} disabled={loading}>Submit</button>
           </form>

@@ -6,7 +6,7 @@ import pdfToText from "react-pdftotext";
 
 import { EXTRACTION_PROMPT_CORE } from "@/components/LLMInfoModal";
 
-export default function FullPipeline ({ className }) {
+export default function FullPipeline () {
   const [usePdf, setUsePdf] = useState(false);
   const [llmLoading, setLlmLoading] = useState(false);
   const [rlLoading, setRlLoading] = useState(false);
@@ -68,7 +68,7 @@ export default function FullPipeline ({ className }) {
   return (
     <>
       <div className="font-bold text-lg">Stakeholder Extraction</div>
-      <div className={className}>
+      <div className='w-full'>
         {/* TODO: popup modal that lets you view definitions*/}
         {usePdf ?
             <button onClick={() => setUsePdf(false)} className="text-blue-500 underline">Use text input</button>

@@ -13,20 +13,22 @@ export default function Home() {
 
   return (
     <>
-      {useFullPipeline ?
-        <button onClick={() => setUseFullPipeline(false)} className="text-blue-500 underline mb-5">Use Separate Components</button>
-        :
-        <button onClick={() => setUseFullPipeline(true)} className="text-blue-500 underline mb-5">Use Full Pipeline</button>
-      }
-      <LLMInfoModal />
-      {useFullPipeline ?
-        <FullPipeline />
-        :
-        <>
-          <TextStakeholderExtract />
-          <RLRunner />
-        </>
-      }
+      <div className='flex flex-col items-start w-full'>
+        {useFullPipeline ?
+          <button onClick={() => setUseFullPipeline(false)} className="text-blue-500 underline">Use Separate Components</button>
+          :
+          <button onClick={() => setUseFullPipeline(true)} className="text-blue-500 underline">Use Full Pipeline</button>
+        }
+        <LLMInfoModal />
+        {useFullPipeline ?
+          <FullPipeline />
+          :
+          <>
+            <TextStakeholderExtract />
+            <RLRunner />
+          </>
+        }
+      </div>
     </>
   );
 }

@@ -1,5 +1,7 @@
 "use client"
 
+import { useState } from "react";
+
 const POSITION_DEF = "Position (-1: Opposed, 0: Neutral, 1: Supportive): Position refers to the stakeholder's stance on the issue relative to the primary stakeholder, based on their actions.\n" +
 "- Opposed (-1): The stakeholder actively works against the objectives of the primary stakeholder.\n" +
 "- Neutral (0): The stakeholder does not take a definitive stance relative to the primary stakeholder.\n" +
@@ -40,13 +42,33 @@ export const EXTRACTION_PROMPT_CORE = "Given the following text data, identify t
 "\n";
 
 export default function LLMInfoModal() {
+  const [showModal, setShowModal] = useState(false);
+
   return (
     <>
-      <div className='fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center'>
-        <div className='flex justify-center bg-gray-500 w-1/2 h-1/2'>
-          asdfasdf
+      <button onClick={() => setShowModal(true)} className="text-blue-500 underline">Show LLM attribute definitions</button>
+      {showModal &&
+        <div onClick={() => setShowModal(false)} className='fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center'>
+          <div onClick={(e) => e.stopPropagation()} className='flex flex-col justify-center bg-white w-1/2 h-1/2'>
+            <div className='flex justify-between'>
+              <h1 className='font-bold text-lg'>LLM Attribute Definitions</h1>
+              <button onClick={() => setShowModal(false)}>🗙</button>
+            </div>
+            <div className='overflow-y-auto'>
+              <h1 className='font-bold'>Position Definition:</h1>
+              <p className='whitespace-pre-wrap'>{POSITION_DEF}</p>
+              <h1 className='font-bold mt-3'>Power Definition:</h1>
+              <p className='whitespace-pre-wrap'>{POWER_DEF}</p>
+              <h1 className='font-bold mt-3'>Knowledge Definition:</h1>
+              <p className='whitespace-pre-wrap'>{KNOWLEDGE_DEF}</p>
+              <h1 className='font-bold mt-3'>Urgency Definition:</h1>
+              <p className='whitespace-pre-wrap'>{URGENCY_DEF}</p>
+              <h1 className='font-bold mt-3'>Legitimacy Definition:</h1>
+              <p className='whitespace-pre-wrap'>{LEGITIMACY_DEF}</p>
+            </div>
+          </div>
         </div>
-      </div>
+      }
     </>
   )
 }
