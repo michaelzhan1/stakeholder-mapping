@@ -30,9 +30,8 @@ export default function TextStakeholderExtract () {
     let textInput = "";
     if (usePdf) {
       let file = e.target.file.files[0];
-      pdfToText(file).then(async (text) => {
-        textInput = EXTRACTION_PROMPT_CORE + `Text data:\n${text}`;
-      });
+      const fileText = await pdfToText(file);
+      textInput = EXTRACTION_PROMPT_CORE + `Text data:\n${fileText}`;
     } else {
       let input = e.target.input.value;
       textInput = EXTRACTION_PROMPT_CORE + `Text data:\n${input}`;
