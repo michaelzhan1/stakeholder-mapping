@@ -59,6 +59,13 @@ class NegotiationEnv(AECEnv):
 
         self._agent_selector = agent_selector(self.agents)
         self.agent_selection = self._agent_selector.reset()
+
+
+        # Initialize network graph for coalition tracking
+        # self.graph = nx.Graph()
+        # self.graph.add_nodes_from(self.agents)
+
+
     
     def reset(self, seed=0, **kwargs):
         np.random.seed(seed)
