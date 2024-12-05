@@ -4,6 +4,7 @@ import TextStakeholderExtract from "@/components/TextStakeholderExtract";
 import RLRunner from "@/components/RLRunner";
 import FullPipeline from "@/components/FullPipeline";
 import LLMInfoModal from "@/components/LLMInfoModal";
+import { BlueButton } from '@/components/Classes'
 
 import { useState } from "react";
 
@@ -22,18 +23,19 @@ export default function Home() {
 
   return (
     <>
-      <div className='flex flex-col items-start w-full'>
+      <div className='flex flex-col items-start w-full p-3'>
         {useFullPipeline ?
-          <button onClick={() => setUseFullPipeline(false)} className="text-blue-500 underline">Use Separate Components</button>
+          <button onClick={() => setUseFullPipeline(false)} className={`${BlueButton}`}>Use Separate Components (LLM, RL)</button>
           :
-          <button onClick={() => setUseFullPipeline(true)} className="text-blue-500 underline">Use Full Pipeline</button>
+          <button onClick={() => setUseFullPipeline(true)} className={`${BlueButton}`}>Use Full Pipeline</button>
         }
-        <LLMInfoModal />
+        <hr className='w-full my-3' />
         {useFullPipeline ?
           <FullPipeline />
           :
           <>
             <TextStakeholderExtract />
+            <hr className='w-full my-3' />
             <RLRunner />
           </>
         }

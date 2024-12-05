@@ -1,5 +1,7 @@
 "use client"
 
+import { TealButtonSmall } from "@/components/Classes";
+
 import { useState } from "react";
 
 const POSITION_DEF = "Position (-1: Opposed, 0: Neutral, 1: Supportive): Position refers to the stakeholder's stance on the issue relative to the primary stakeholder, based on their actions.\n" +
@@ -46,14 +48,15 @@ export default function LLMInfoModal() {
 
   return (
     <>
-      <button onClick={() => setShowModal(true)} className="text-blue-500 underline">Show LLM attribute definitions</button>
+      <button onClick={() => setShowModal(true)} className={`${TealButtonSmall}`}>ⓘ Show LLM attribute definitions</button>
       {showModal &&
         <div onClick={() => setShowModal(false)} className='fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center'>
-          <div onClick={(e) => e.stopPropagation()} className='flex flex-col justify-center bg-white w-1/2 h-1/2'>
+          <div onClick={(e) => e.stopPropagation()} className='flex flex-col justify-center bg-white w-2/3 h-2/3 p-3 rounded-lg'>
             <div className='flex justify-between'>
               <h1 className='font-bold text-lg'>LLM Attribute Definitions</h1>
               <button onClick={() => setShowModal(false)}>🗙</button>
             </div>
+            <hr className='my-3' />
             <div className='overflow-y-auto'>
               <h1 className='font-bold'>Position Definition:</h1>
               <p className='whitespace-pre-wrap'>{POSITION_DEF}</p>

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { ActiveButton, InactiveButton } from "@/components/Classes";
+
 export default function RLRunner () {
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState(null);
@@ -36,20 +38,18 @@ export default function RLRunner () {
     setLoading(false);
   }
 
-  // Define button states
-  const activeButtonClass = "bg-green-500 hover:bg-green-600 active:bg-green-700";
-  const inactiveButtonClass = "bg-gray-300 cursor-not-allowed";
-
   return (
     <>
-      <div className="font-bold mt-5 text-lg">Reinforcement Learning</div>
+      <div className="font-bold text-lg">Reinforcement Learning</div>
       <div className='w-full'>
         <form onSubmit={handleSubmit} className="flex flex-col items-start">
-          <textarea name="input" placeholder="Input Stakeholder Features (CSV format)" required className="border-2 border-black w-1/2" />
-          <button type="submit" className={loading ? inactiveButtonClass : activeButtonClass} disabled={loading}>Submit</button>
+          <textarea name="input" rows="5" placeholder="Input Stakeholder Features (CSV format)" required className="border-2 border-black w-1/2" />
+          <div className="mt-1">
+            <button type="submit" className={loading ? InactiveButton : ActiveButton} disabled={loading}>Submit</button>
+          </div>
         </form>
 
-        <div className="font-bold">Response</div>
+        <div className="font-bold text-lg">Response</div>
         {loading ?
           <div className="text-gray-500">Running RL...</div>
           :

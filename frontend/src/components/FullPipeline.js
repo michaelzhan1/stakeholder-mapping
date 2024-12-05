@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 
-import pdfToText from "react-pdftotext";
-
 import { EXTRACTION_PROMPT_CORE } from "@/components/LLMInfoModal";
+import { LightGrayButton, ActiveButton, InactiveButton } from "@/components/Classes";
+
+import pdfToText from "react-pdftotext";
+import LLMInfoModal from "@/components/LLMInfoModal";
+
 
 export default function FullPipeline () {
   const [usePdf, setUsePdf] = useState(false);
@@ -51,42 +54,42 @@ export default function FullPipeline () {
     if (usePdf) {
       let file = e.target.file.files[0];
       const text = await pdfToText(file);
-      textInput = EXTRACTION_PROMPT_CORE + `Text data:\n${text}`;
+      textInput = EXTRACTION_PROMPT_CORE + "Limit to 5 stakeholders\n" + `Text data:\n${text}`;
     } else {
       let input = e.target.input.value;
-      textInput = EXTRACTION_PROMPT_CORE + `Text data:\n${input}`;
+      textInput = EXTRACTION_PROMPT_CORE + "Limit to 5 stakeholders\n" + `Text data:\n${input}`;
     }
     
     const gptOutput = await callGPT(textInput);
     runRL(gptOutput);
   }
 
-  // Define button states
-  const activeButtonClass = "bg-green-500 hover:bg-green-600 active:bg-green-700";
-  const inactiveButtonClass = "bg-gray-300 cursor-not-allowed";
-
   return (
     <>
-      <div className="font-bold text-lg">Stakeholder Extraction</div>
+      <div className="flex gap-3">
+        <div className="font-bold text-lg">Stakeholder Extraction</div>
+        <LLMInfoModal />
+      </div>
       <div className='w-full'>
-        {/* TODO: popup modal that lets you view definitions*/}
-        {usePdf ?
-            <button onClick={() => setUsePdf(false)} className="text-blue-500 underline">Use text input</button>
-            :
-            <button onClick={() => setUsePdf(true)} className="text-blue-500 underline">Use PDF input (experimental)</button>
-        }
-
         {usePdf ?
           <form onSubmit={handleSubmit} className="flex flex-col items-start">
             <input type="file" name="file" accept=".pdf" required className="" />
-            <button type="submit" className={(rlLoading || llmLoading) ? inactiveButtonClass : activeButtonClass} disabled={rlLoading || llmLoading}>Submit PDF</button>
+            <div className="flex gap-3 mt-1">
+              <button type="submit" className={(rlLoading || llmLoading) ? InactiveButton : ActiveButton} disabled={rlLoading || llmLoading}>Submit PDF</button>
+              <button type="button" onClick={() => setUsePdf(false)} className={`${LightGrayButton}`}>Use text input</button>
+            </div>
           </form>
           :
-          <form onSubmit={handleSubmit} className="flex flex-col items-start">
-            <textarea name="input" placeholder="Input prompt here" required className="border-2 border-black w-1/2" />
-            <button type="submit" className={(rlLoading || llmLoading) ? inactiveButtonClass : activeButtonClass} disabled={rlLoading || llmLoading}>Submit</button>
+          <form onSubmit={handleSubmit} className="flex flex-col items-start mt-3">
+            <textarea name="input" rows="5" placeholder="Input prompt here" required className="border-2 border-black w-1/2" />
+            <div className="flex gap-3 mt-1">
+              <button type="submit" className={(rlLoading || llmLoading) ? InactiveButton : ActiveButton} disabled={rlLoading || llmLoading}>Submit</button>
+              <button type="button" onClick={() => setUsePdf(true)} className={`${LightGrayButton}`}>Use PDF input (experimental)</button>
+            </div>
           </form>
         }
+
+        <hr className='w-full my-3' />
 
         <div className="font-bold">LLM Response (limited to 5 stakeholders)</div>
         {llmLoading ?
@@ -98,6 +101,8 @@ export default function FullPipeline () {
             <div className="text-gray-500">No LLM response yet</div>
           )
         }
+
+        <hr className='w-full my-3' />
         
         <div className="font-bold">RL Response</div>
         {rlLoading ?
