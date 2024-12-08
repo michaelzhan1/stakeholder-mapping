@@ -15,6 +15,7 @@ export default function FullPipeline () {
   const [rlLoading, setRlLoading] = useState(false);
   const [llmResponse, setLlmResponse] = useState(null);
   const [rlResponse, setRlResponse] = useState(null);
+  const [gifUrl, setGifUrl] = useState(null);
 
   const runRL = async (input) => {
     setRlLoading(true);
@@ -29,6 +30,13 @@ export default function FullPipeline () {
 
     const output = await response.text();
     setRlResponse(output);
+
+    const gifResponse = await fetch(process.env.NEXT_PUBLIC_RL_API_ENDPOINT + "/gif", {
+      method: "POST"
+    });
+    const blob = await gifResponse.blob();
+    const url = URL.createObjectURL(blob);
+    setGifUrl(url);
 
     setRlLoading(false);
   }
@@ -108,8 +116,11 @@ export default function FullPipeline () {
         {rlLoading ?
           <div className="text-gray-500">Running RL...</div>
           :
-          (rlResponse ?
-            <div className="whitespace-pre-wrap">{rlResponse}</div>
+          (rlResponse && gifUrl ?
+            <>
+              <img src={gifUrl} alt="RL gif" className="w-1/2" />
+              <div className="whitespace-pre-wrap">{rlResponse}</div>
+            </>
             :
             <div className="text-gray-500">No RL response yet</div>
           )
