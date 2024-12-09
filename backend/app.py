@@ -1,5 +1,5 @@
 from flask import Flask, request, abort, send_file
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 from dotenv import load_dotenv
 from train import run
 import pandas as pd
@@ -15,6 +15,7 @@ app = Flask(__name__)
 CORS(app, origins=[os.getenv('FRONTEND_URL')])
 
 @app.route('/api/rl-endpoint', methods=['POST'])
+@cross_origin(origin=os.getenv('FRONTEND_URL'))
 def run_rl():
     if request.content_type != 'text/plain':
         abort(400, description='Content-Type must be text/plain')
@@ -33,6 +34,7 @@ def run_rl():
     return output
 
 @app.route('/api/rl-endpoint/gif', methods=['POST'])
+@cross_origin(origin=os.getenv('FRONTEND_URL'))
 def get_rl_gif():
     fname = 'stakeholder_network.gif'
 
