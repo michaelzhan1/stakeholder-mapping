@@ -1,10 +1,13 @@
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 from matplotlib.animation import FuncAnimation
 from matplotlib import animation as anim
 from matplotlib.lines import Line2D
 from IPython.display import HTML
+
+matplotlib.use('Agg')
 
 class AnimatedGraph:
     def __init__(self, adj_matrices, actions, node_labels=None, interval=1000):
