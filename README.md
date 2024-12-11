@@ -63,7 +63,7 @@ FRONTEND_URL=http://127.0.0.1:3000
 ### Running the server
 Run the server with Flask while within the backend folder (so that `app.py` is visible), which should default the port to 5000. Again, you can use Ctrl-C to exit.
 ```bash
-flask run
+flask --app app run
 ```
 
 After this step, the frontend should have full functionality.
