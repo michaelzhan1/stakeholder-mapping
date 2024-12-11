@@ -47,3 +47,7 @@ def get_rl_gif():
 def dummy():
     print("Dummy pinged")
     return 'Hello, World!'
+
+@app.route('/', methods=['GET'])
+def hello_world():
+    return 'Hello, world! on the website'
