@@ -2,7 +2,7 @@
 
 This tool is a website built on Next.js and React, intended to identify stakeholders from user-input documents and generate a graph of coalitions between stakeholders.
 
-For full functionality, please follow the steps below. You will need to have both the frontend server running at `localhost:3000` and the backend server running at `localhost:5000` for full functionality.
+For full functionality, please follow the steps below. You will need to have both the frontend server running at `127.0.0.1:3000` and the backend server running at `127.0.0.1:5000` for full functionality. Note that using `localhost` instead of `127.0.0.1` would occasionally cause errors on Mac during testing.
 
 ## Running the Frontend Locally
 
@@ -22,13 +22,13 @@ Once packages are installed, run the development server:
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result. Making any changes in code and saving the file should update the localhost instance automatically. You can stop the server with Ctrl-C within the running terminal.
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000) with your browser to see the result. Making any changes in code and saving the file should update the localhost instance automatically. You can stop the server with Ctrl-C within the running terminal.
 
 ### Environment Variables
 At the top of the frontend folder (sibling to `src/`), create a file called `.env.local`, which will hold environment secrets. Add two lines for your OpenAI API key and the backend URL. You may need to restart the development server to reload the environment variables.
 ```bash
 OPENAI_API_KEY=<your key here>
-NEXT_PUBLIC_RL_API_ENDPOINT=http://localhost:5000/api/rl-endpoint
+NEXT_PUBLIC_RL_API_ENDPOINT=http://127.0.0.1:5000/api/rl-endpoint
 ```
 
 ## Running the Backend Server
@@ -57,7 +57,7 @@ cd backend
 
 Create a file named `.env` (no local this time) at the top of the backend folder, and place the following line within.
 ```bash
-FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=http://127.0.0.1:3000
 ```
 
 ### Running the server
