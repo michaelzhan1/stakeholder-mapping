@@ -42,3 +42,8 @@ def get_rl_gif():
         abort(404, description='GIF not found')
     
     return send_file(fname, mimetype='image/gif')
+
+@app.route('/api/dummy', methods=['POST'])
+def dummy():
+    print("Dummy pinged")
+    return 'Hello, World!'

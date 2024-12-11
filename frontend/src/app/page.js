@@ -3,7 +3,7 @@
 import TextStakeholderExtract from "@/components/TextStakeholderExtract";
 import RLRunner from "@/components/RLRunner";
 import FullPipeline from "@/components/FullPipeline";
-import LLMInfoModal from "@/components/LLMInfoModal";
+import Dummy from "@/components/Dummy";
 import { BlueButton } from '@/components/Classes'
 
 import { useState } from "react";
@@ -23,6 +23,7 @@ export default function Home() {
 
   return (
     <>
+      <Dummy />
       <div className='flex flex-col items-start w-full p-3'>
         {useFullPipeline ?
           <button onClick={() => setUseFullPipeline(false)} className={`${BlueButton}`}>Use Separate Components (LLM, RL)</button>
